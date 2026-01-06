@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TCG Card Scanner</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 15px;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 0.75rem;
+            margin-bottom: 12px;
+            padding: 6px;
+            border-radius: 5px;
+        }
+        
+        .status.connected { background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+        .status.disconnected { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        
+        /* Search Section */
+        .search-section {
+            background: #0f0f23;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .search-row select {
+            width: 120px;
+            padding: 12px;
+            font-size: 0.9rem;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        
+        .search-row input {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            outline: none;
+        }
+        
+        .search-row input:focus {
+            border-color: #00d4ff;
+        }
+        
+        .search-hint {
+            font-size: 0.75rem;
+            color: #666;
+            text-align: center;
+        }
+        
+        /* Search Results */
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .search-result {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .search-result:hover {
+            background: #252542;
+        }
+        
+        .search-result:active {
+            background: #303055;
+        }
+        
+        .result-info {
+            flex: 1;
+        }
+        
+        .result-name {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 3px;
+        }
+        
+        .result-meta {
+            font-size: 0.75rem;
+            color: #888;
+        }
+        
+        .result-sku {
+            color: #00d4ff;
+            font-family: monospace;
+        }
+        
+        .result-variant {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .result-variant.normal { background: #444; }
+        .result-variant.holo { background: #ff8c00; color: #000; }
+        .result-variant.reverse { background: #8e44ad; }
+        
+        .result-add {
+            background: #27ae60;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .result-qty {
+            font-size: 0.75rem;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .no-results {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+        
+        /* Queue Section */
+        .queue-section {
+            background: #0f0f23;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .queue-header h3 {
+            font-size: 0.9rem;
+            color: #00d4ff;
+        }
+        
+        .queue-count {
+            background: #00d4ff;
+            color: #000;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .queue-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .queue-item .name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 10px;
+        }
+        
+        .queue-item .sku {
+            color: #00d4ff;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+        
+        .queue-item .remove {
+            background: #e74c3c;
+            border: none;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+        
+        .queue-empty {
+            color: #555;
+            text-align: center;
+            padding: 15px;
+            font-size: 0.85rem;
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .action-btn {
+            padding: 14px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .action-btn.add-inventory { background: #27ae60; color: #fff; }
+        .action-btn.print-labels { background: #3498db; color: #fff; }
+        .action-btn.clear { background: #555; color: #fff; }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.show { display: flex; }
+        
+        .modal {
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 90%;
+            width: 380px;
+            text-align: center;
+        }
+        
+        .modal h2 {
+            color: #00d4ff;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+        
+        .modal p {
+            color: #aaa;
+            margin-bottom: 18px;
+            font-size: 0.9rem;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        .modal-btn.yes { background: #27ae60; color: #fff; }
+        .modal-btn.print { background: #3498db; color: #fff; }
+        .modal-btn.continue { background: #9b59b6; color: #fff; }
+        .modal-btn.cancel { background: #555; color: #fff; }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #27ae60;
+            color: #fff;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1001;
+            font-size: 0.9rem;
+        }
+        
+        .toast.show { opacity: 1; }
+        
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .loading.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ TCG Card Scanner</h1>
+        <div class="status" id="status">Connecting...</div>
+        
+        <!-- Search Section -->
+        <div class="search-section">
+            <div class="search-row">
+                <select id="setSelect">
+                    <option value="">All Sets</option>
+                    <option value="me02">ME02</option>
+                    <option value="sv09">SV09</option>
+                    <option value="sv03">SV03</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="Search name or number..." autofocus>
+            </div>
+            <div class="search-hint">Type card name, number, or SKU</div>
+            
+            <div class="search-results" id="searchResults">
+                <div class="no-results">Start typing to search...</div>
+            </div>
+        </div>
+        
+        <!-- Queue Section -->
+        <div class="queue-section">
+            <div class="queue-header">
+                <h3>📋 Queue</h3>
+                <span class="queue-count" id="queueCount">0</span>
+            </div>
+            <div class="queue-list" id="queueList">
+                <div class="queue-empty">Search and tap cards to add</div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn add-inventory" id="btnAdd" onclick="confirmAdd()" disabled>
+                    ✓ Add to Inventory
+                </button>
+                <button class="action-btn print-labels" id="btnPrint" onclick="printQueue()" disabled>
+                    🖨️ Print Labels
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h2>Add to Inventory?</h2>
+            <p>Add <span id="confirmCount">0</span> cards to Odoo?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn yes" onclick="executeAdd()">Yes, Add to Inventory</button>
+                <button class="modal-btn cancel" onclick="closeModal('confirmModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div class="modal-overlay" id="successModal">
+        <div class="modal">
+            <h2>✓ Added!</h2>
+            <p><span id="successCount">0</span> cards added to inventory</p>
+            <div class="modal-buttons">
+                <button class="modal-btn print" onclick="printAdded()">🖨️ Print Labels Now</button>
+                <button class="modal-btn continue" onclick="closeModal('successModal')">➕ Add More Cards</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        const API = '';
+        let queue = [];
+        let lastAdded = [];
+        let searchTimeout = null;
+        
+        // Status check
+        async function checkStatus() {
+            try {
+                const res = await fetch(`${API}/api/status`);
+                const data = await res.json();
+                const el = document.getElementById('status');
+                el.textContent = data.odoo === 'connected' ? '✓ Connected' : '✗ Disconnected';
+                el.className = 'status ' + (data.odoo === 'connected' ? 'connected' : 'disconnected');
+            } catch {
+                document.getElementById('status').textContent = '✗ Server offline';
+                document.getElementById('status').className = 'status disconnected';
+            }
+        }
+        
+        // Search
+        async function search(query) {
+            const set = document.getElementById('setSelect').value;
+            const resultsEl = document.getElementById('searchResults');
+            
+            if (query.length < 1) {
+                resultsEl.innerHTML = '<div class="no-results">Start typing to search...</div>';
+                return;
+            }
+            
+            try {
+                const url = `${API}/api/search?q=${encodeURIComponent(query)}&set=${set}&limit=15`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (data.results.length === 0) {
+                    resultsEl.innerHTML = '<div class="no-results">No cards found</div>';
+                    return;
+                }
+                
+                resultsEl.innerHTML = data.results.map(card => {
+                    const variantClass = card.variant.toLowerCase().replace(' ', '');
+                    const inQueue = queue.some(q => q.sku === card.sku);
+                    
+                    return `
+                        <div class="search-result" onclick="addToQueue('${card.sku}', '${escapeHtml(card.name)}')">
+                            <div class="result-info">
+                                <div class="result-name">
+                                    ${escapeHtml(card.name)}
+                                    <span class="result-variant ${variantClass}">${card.variant}</span>
+                                </div>
+                                <div class="result-meta">
+                                    <span class="result-sku">${card.sku}</span>
+                                    <span class="result-qty">Stock: ${card.quantity}</span>
+                                </div>
+                            </div>
+                            <button class="result-add" ${inQueue ? 'disabled style="background:#555"' : ''}>
+                                ${inQueue ? '✓' : '+'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (e) {
+                resultsEl.innerHTML = '<div class="no-results">Search failed</div>';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Queue management
+        function addToQueue(sku, name) {
+            if (queue.some(q => q.sku === sku)) {
+                showToast('Already in queue', '#e74c3c');
+                return;
+            }
+            
+            queue.push({ sku, name });
+            updateQueue();
+            showToast(`Added: ${sku}`);
+            
+            // Refresh search results to show checkmark
+            const query = document.getElementById('searchInput').value;
+            if (query) search(query);
+        }
+        
+        function removeFromQueue(sku) {
+            queue = queue.filter(q => q.sku !== sku);
+            updateQueue();
+            
+            // Refresh search
+            const query = document.getElementById('searchInput').value;
+            if (query) search(query);
+        }
+        
+        function updateQueue() {
+            const listEl = document.getElementById('queueList');
+            const countEl = document.getElementById('queueCount');
+            const btnAdd = document.getElementById('btnAdd');
+            const btnPrint = document.getElementById('btnPrint');
+            
+            countEl.textContent = queue.length;
+            btnAdd.disabled = queue.length === 0;
+            btnPrint.disabled = queue.length === 0;
+            
+            if (queue.length === 0) {
+                listEl.innerHTML = '<div class="queue-empty">Search and tap cards to add</div>';
+                return;
+            }
+            
+            listEl.innerHTML = queue.map(q => `
+                <div class="queue-item">
+                    <span class="name">${escapeHtml(q.name)}</span>
+                    <span class="sku">${q.sku}</span>
+                    <button class="remove" onclick="event.stopPropagation(); removeFromQueue('${q.sku}')">✕</button>
+                </div>
+            `).join('');
+        }
+        
+        // Add to inventory
+        function confirmAdd() {
+            if (queue.length === 0) return;
+            document.getElementById('confirmCount').textContent = queue.length;
+            document.getElementById('confirmModal').classList.add('show');
+        }
+        
+        async function executeAdd() {
+            closeModal('confirmModal');
+            
+            lastAdded = [];
+            let count = 0;
+            
+            for (const item of queue) {
+                try {
+                    const res = await fetch(`${API}/api/add-card`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sku: item.sku })
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        lastAdded.push({ sku: item.sku, name: item.name });
+                        count++;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            
+            queue = [];
+            updateQueue();
+            
+            // Refresh search to update stock counts
+            const query = document.getElementById('searchInput').value;
+            if (query) search(query);
+            
+            document.getElementById('successCount').textContent = count;
+            document.getElementById('successModal').classList.add('show');
+        }
+        
+        // Print
+        function printQueue() {
+            queue.forEach(q => {
+                window.open(`${API}/api/print-label?sku=${encodeURIComponent(q.sku)}`, '_blank');
+            });
+        }
+        
+        async function printAdded() {
+            closeModal('successModal');
+            
+            for (const item of lastAdded) {
+                window.open(`${API}/api/print-label?sku=${encodeURIComponent(item.sku)}`, '_blank');
+                await new Promise(r => setTimeout(r, 250));
+            }
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+        
+        function showToast(msg, color = '#27ae60') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.background = color;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1500);
+        }
+        
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => search(this.value.trim()), 200);
+        });
+        
+        document.getElementById('setSelect').addEventListener('change', function() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (query) search(query);
+        });
+        
+        // Init
+        checkStatus();
+        setInterval(checkStatus, 10000);
+    </script>
+</body>
+</html>
