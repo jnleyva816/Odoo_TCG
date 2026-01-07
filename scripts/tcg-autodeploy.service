@@ -1,0 +1,17 @@
+[Unit]
+Description=TCG Auto-Deploy Webhook Server
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/Odoo_TCG
+Environment=WEBHOOK_SECRET=your-secret-here-change-me
+ExecStart=/usr/bin/python3 /opt/Odoo_TCG/scripts/deploy-webhook.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
