@@ -6,6 +6,7 @@ import InventoryPage from './pages/InventoryPage'
 import SetsPage from './pages/SetsPage'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { FeaturesProvider, useFeatures } from './contexts/FeaturesContext'
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,7 @@ function AppRoutes() {
     const saved = localStorage.getItem('darkMode')
     return saved ? JSON.parse(saved) : true
   })
+  const { features } = useFeatures()
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode))
@@ -40,6 +42,10 @@ function AppRoutes() {
       document.documentElement.classList.remove('dark')
     }
   }, [darkMode])
+
+  // Determine default route based on enabled features
+  const defaultRoute = features.scanner_page ? '/scanner' : 
+                       features.inventory_page ? '/inventory' : '/login'
 
   return (
     <Routes>
@@ -51,40 +57,55 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <Navigate to="/scanner" replace />
+            <Navigate to={defaultRoute} replace />
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/scanner"
-        element={
-          <ProtectedRoute>
-            <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
-              <ScannerPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/inventory"
-        element={
-          <ProtectedRoute>
-            <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
-              <InventoryPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/sets"
-        element={
-          <ProtectedRoute>
-            <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
-              <SetsPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+
+      {/* Scanner Page - conditionally enabled */}
+      {features.scanner_page && (
+        <Route
+          path="/scanner"
+          element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
+                <ScannerPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      )}
+
+      {/* Inventory Page - conditionally enabled */}
+      {features.inventory_page && (
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
+                <InventoryPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      )}
+
+      {/* Sets Page - conditionally enabled */}
+      {features.sets_page && (
+        <Route
+          path="/sets"
+          element={
+            <ProtectedRoute>
+              <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
+                <SetsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      )}
+
+      {/* Catch-all redirect */}
+      <Route path="*" element={<Navigate to={defaultRoute} replace />} />
     </Routes>
   )
 }
@@ -92,9 +113,11 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <FeaturesProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </FeaturesProvider>
     </BrowserRouter>
   )
 }

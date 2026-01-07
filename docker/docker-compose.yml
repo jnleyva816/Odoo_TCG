@@ -58,6 +58,11 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - ALERT_EMAIL=${ALERT_EMAIL:-}
+      # Feature flags
+      - FEATURE_SETS_PAGE=${FEATURE_SETS_PAGE:-false}
+      - FEATURE_SCANNER_PAGE=${FEATURE_SCANNER_PAGE:-true}
+      - FEATURE_INVENTORY_PAGE=${FEATURE_INVENTORY_PAGE:-true}
+      - FEATURE_LABEL_PRINTING=${FEATURE_LABEL_PRINTING:-true}
       # Printer settings
       - PRINTER_ENABLED=${PRINTER_ENABLED:-false}
       - PRINTER_IP=${PRINTER_IP:-}

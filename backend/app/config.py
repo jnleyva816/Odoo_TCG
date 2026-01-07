@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     alert_email: str = ""  # Email to receive security alerts
 
+    # Feature flags - enable/disable features
+    feature_sets_page: bool = False  # Sets import page (disabled by default)
+    feature_scanner_page: bool = True  # Barcode scanner page
+    feature_inventory_page: bool = True  # Inventory management page
+    feature_label_printing: bool = True  # Label printing functionality
+
 
 @lru_cache
 def get_settings() -> Settings:

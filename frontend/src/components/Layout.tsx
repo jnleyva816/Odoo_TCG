@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Sun, Moon, ScanLine, Package, Database, LogOut, User } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useFeatures } from '../contexts/FeaturesContext'
 
 interface LayoutProps {
   children: ReactNode
@@ -12,12 +13,14 @@ interface LayoutProps {
 export default function Layout({ children, darkMode, onToggleDark }: LayoutProps) {
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { features } = useFeatures()
 
+  // Build nav items based on enabled features
   const navItems = [
-    { path: '/scanner', label: 'Scanner', icon: ScanLine },
-    { path: '/inventory', label: 'Inventory', icon: Package },
-    { path: '/sets', label: 'Sets', icon: Database },
-  ]
+    features.scanner_page && { path: '/scanner', label: 'Scanner', icon: ScanLine },
+    features.inventory_page && { path: '/inventory', label: 'Inventory', icon: Package },
+    features.sets_page && { path: '/sets', label: 'Sets', icon: Database },
+  ].filter(Boolean) as { path: string; label: string; icon: typeof ScanLine }[]
 
   return (
     <div className="min-h-screen flex flex-col">

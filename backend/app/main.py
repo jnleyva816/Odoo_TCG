@@ -103,6 +103,16 @@ def create_app() -> FastAPI:
             "version": "2.0.0",
         }
 
+    @app.get("/api/features")
+    async def get_features():
+        """Get enabled features (public endpoint for frontend)."""
+        return {
+            "sets_page": settings.feature_sets_page,
+            "scanner_page": settings.feature_scanner_page,
+            "inventory_page": settings.feature_inventory_page,
+            "label_printing": settings.feature_label_printing,
+        }
+
     @app.get("/")
     async def root():
         """Root endpoint - redirect to docs."""
