@@ -51,9 +51,12 @@ export default function SetsPage() {
   })
 
   // Poll import status
-  const { data: importStatus } = useQuery<ImportStatus>({
+  const { data: importStatus } = useQuery<ImportStatus | null>({
     queryKey: ['import-status', importingSet],
-    queryFn: () => importingSet ? getImportStatus(importingSet) : null,
+    queryFn: async () => {
+      if (!importingSet) return null
+      return getImportStatus(importingSet) as Promise<ImportStatus>
+    },
     enabled: !!importingSet,
     refetchInterval: importingSet ? 2000 : false,
   })

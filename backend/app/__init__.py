@@ -1,4 +1,1 @@
 """TCG Backend - FastAPI application."""
-
-
-

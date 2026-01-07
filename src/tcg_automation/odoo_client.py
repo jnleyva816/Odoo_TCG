@@ -40,10 +40,7 @@ class OdooClient:
             self._models = xmlrpc.client.ServerProxy(f"{self.config.url}/xmlrpc/2/object")
 
             self._uid = self._common.authenticate(
-                self.config.db,
-                self.config.user,
-                self.config.password,
-                {}
+                self.config.db, self.config.user, self.config.password, {}
             )
 
             if not self._uid:
@@ -63,13 +60,7 @@ class OdooClient:
             self.connect()
 
         return self._models.execute_kw(  # type: ignore
-            self.config.db,
-            self.uid,
-            self.config.password,
-            model,
-            method,
-            args,
-            kwargs
+            self.config.db, self.uid, self.config.password, model, method, args, kwargs
         )
 
     def search(self, model: str, domain: list) -> list[int]:
@@ -77,11 +68,7 @@ class OdooClient:
         return self.execute(model, "search", domain)
 
     def search_read(
-        self,
-        model: str,
-        domain: list,
-        fields: list[str] | None = None,
-        limit: int | None = None
+        self, model: str, domain: list, fields: list[str] | None = None, limit: int | None = None
     ) -> list[dict]:
         """Search and read records in one call."""
         kwargs: dict[str, Any] = {}
@@ -133,8 +120,7 @@ class OdooClient:
 
         # Find or create child category
         child_ids = self.search(
-            "product.category",
-            [("name", "=", name), ("parent_id", "=", parent_id)]
+            "product.category", [("name", "=", name), ("parent_id", "=", parent_id)]
         )
         if child_ids:
             return child_ids[0]
@@ -152,10 +138,7 @@ class OdooClient:
             )
             if not locations:
                 locations = self.search_read(
-                    "stock.location",
-                    [("usage", "=", "internal")],
-                    ["id"],
-                    limit=1
+                    "stock.location", [("usage", "=", "internal")], ["id"], limit=1
                 )
             if not locations:
                 logger.error("No stock location found")
@@ -174,11 +157,14 @@ class OdooClient:
                 new_qty = quants[0]["quantity"] + quantity
                 self.write("stock.quant", [quants[0]["id"]], {"quantity": new_qty})
             else:
-                self.create("stock.quant", {
-                    "product_id": product_id,
-                    "location_id": location_id,
-                    "quantity": quantity,
-                })
+                self.create(
+                    "stock.quant",
+                    {
+                        "product_id": product_id,
+                        "location_id": location_id,
+                        "quantity": quantity,
+                    },
+                )
 
             return True
 
@@ -197,5 +183,3 @@ def get_odoo_client() -> OdooClient:
     if _client is None:
         _client = OdooClient()
     return _client
-
-

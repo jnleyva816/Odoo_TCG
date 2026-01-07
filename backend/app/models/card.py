@@ -33,6 +33,3 @@ class CardSearchResult(BaseModel):
     cards: list[Card] = Field(default_factory=list)
     total: int = Field(0, description="Total number of matching cards")
     query: str = Field("", description="Original search query")
-
-
-

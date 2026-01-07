@@ -3,15 +3,13 @@
 import base64
 import io
 import re
-from decimal import Decimal
-
-from fastapi import APIRouter, Depends, HTTPException
-from reportlab.lib.units import mm
-from reportlab.pdfgen import canvas
-from reportlab.graphics.barcode import code128
 
 import qrcode
+from fastapi import APIRouter, Depends, HTTPException
 from PIL import Image
+from reportlab.graphics.barcode import code128
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
 
 from ..models import LabelRequest, LabelResponse
 from ..services import OdooService, get_odoo_service, get_printer_service
@@ -22,25 +20,25 @@ router = APIRouter(prefix="/labels", tags=["Labels"])
 def extract_variant(name: str) -> tuple[str, str | None]:
     """Extract variant info from card name. Returns (clean_name, variant)."""
     variant_patterns = [
-        (r'\s*\((Reverse Holo)\)', r'\1'),
-        (r'\s*\((Holo)\)', r'\1'),
-        (r'\s*\((Full Art)\)', r'\1'),
-        (r'\s*\((Secret)\)', r'\1'),
-        (r'\s*\((Promo)\)', r'\1'),
-        (r'\s*-\s*(Reverse Holo)', r'\1'),
-        (r'\s*-\s*(Holo)', r'\1'),
+        (r"\s*\((Reverse Holo)\)", r"\1"),
+        (r"\s*\((Holo)\)", r"\1"),
+        (r"\s*\((Full Art)\)", r"\1"),
+        (r"\s*\((Secret)\)", r"\1"),
+        (r"\s*\((Promo)\)", r"\1"),
+        (r"\s*-\s*(Reverse Holo)", r"\1"),
+        (r"\s*-\s*(Holo)", r"\1"),
     ]
-    
+
     variant = None
     cleaned = name
-    
+
     for pattern, _ in variant_patterns:
         match = re.search(pattern, name, flags=re.IGNORECASE)
         if match:
             variant = match.group(1)
-            cleaned = re.sub(pattern, '', name, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(pattern, "", name, flags=re.IGNORECASE).strip()
             break
-    
+
     return cleaned, variant
 
 
@@ -64,7 +62,7 @@ def generate_label_pdf(
     barcode: str | None = None,
 ) -> bytes:
     """Generate a label PDF for a card with QR code and barcode.
-    
+
     Label size: 28mm (1.1") wide x 60mm tall - rotated 90° for continuous roll
     Content is rotated so when printed on 1.1" roll, you read it by rotating label.
     """
@@ -83,29 +81,30 @@ def generate_label_pdf(
     c.saveState()
     c.translate(width, 0)
     c.rotate(90)
-    
+
     # Now working in rotated space: height becomes "width", width becomes "height"
     # Effective drawing area: 60mm wide x 28mm tall
     draw_width = height  # 60mm
     draw_height = width  # 28mm
-    
+
     # Extract variant from name
     clean_name, variant = extract_variant(name)
-    
+
     margin = 2 * mm
-    
+
     # QR Code - small, top right
     qr_size = 10 * mm
     qr_x = draw_width - qr_size - margin
     qr_y = draw_height - qr_size - margin
-    
+
     try:
         qr_img = generate_qr_code(sku, box_size=2)
         qr_buffer = io.BytesIO()
-        qr_img.save(qr_buffer, format='PNG')
+        qr_img.save(qr_buffer, format="PNG")
         qr_buffer.seek(0)
-        
+
         from reportlab.lib.utils import ImageReader
+
         qr_reader = ImageReader(qr_buffer)
         c.drawImage(qr_reader, qr_x, qr_y, width=qr_size, height=qr_size)
     except Exception:
@@ -114,7 +113,7 @@ def generate_label_pdf(
 
     # Left side content
     c.setFillColorRGB(0, 0, 0)
-    
+
     # Card name at top
     c.setFont("Helvetica-Bold", 6)
     display_name = clean_name[:30] + "..." if len(clean_name) > 30 else clean_name
@@ -174,12 +173,12 @@ async def generate_label(
         )
 
     product = records[0]
-    
+
     # Handle Odoo False values
     barcode = product.get("barcode")
     if barcode is False:
         barcode = None
-    
+
     # Get set name from category
     categ = product.get("categ_id")
     set_name = categ[1] if categ and isinstance(categ, (list, tuple)) else None
@@ -230,7 +229,7 @@ async def preview_printer_label(
 ):
     """Preview the printer label as PNG image - no paper wasted!"""
     from fastapi.responses import Response
-    
+
     printer = get_printer_service()
 
     # Get product details
@@ -247,11 +246,11 @@ async def preview_printer_label(
         )
 
     product = records[0]
-    
+
     # Extract set name from category
     categ = product.get("categ_id")
     set_name = categ[1] if categ and isinstance(categ, (list, tuple)) else None
-    
+
     # Extract variant from name
     clean_name, variant = extract_variant(product.get("name") or "Unknown")
 
@@ -263,16 +262,14 @@ async def preview_printer_label(
         set_name=set_name,
         variant=variant,
     )
-    
+
     # Convert to PNG bytes
     img_buffer = io.BytesIO()
-    label_image.save(img_buffer, format='PNG')
+    label_image.save(img_buffer, format="PNG")
     img_buffer.seek(0)
-    
+
     return Response(
-        content=img_buffer.getvalue(),
-        media_type="image/png",
-        headers={"Cache-Control": "no-cache"}
+        content=img_buffer.getvalue(), media_type="image/png", headers={"Cache-Control": "no-cache"}
     )
 
 
@@ -283,7 +280,7 @@ async def print_label_direct(
 ):
     """Print label directly to Brother QL printer."""
     printer = get_printer_service()
-    
+
     if not printer.is_available:
         return {
             "success": False,
@@ -304,11 +301,11 @@ async def print_label_direct(
         )
 
     product = records[0]
-    
+
     # Extract set name from category
     categ = product.get("categ_id")
     set_name = categ[1] if categ and isinstance(categ, (list, tuple)) else None
-    
+
     # Extract variant from name
     clean_name, variant = extract_variant(product.get("name") or "Unknown")
 

@@ -1,11 +1,10 @@
 """Set management endpoints - list available sets and trigger imports."""
 
-import asyncio
 import base64
-import httpx
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from ..services import OdooService, get_odoo_service
@@ -71,27 +70,27 @@ async def get_available_sets(
     odoo: OdooService = Depends(get_odoo_service),
 ) -> SetListResponse:
     """Get list of available sets from TCGdex with download status."""
-    
+
     # Fetch all sets from TCGdex
     try:
         tcgdex_sets = await fetch_tcgdex_sets()
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Failed to fetch sets from TCGdex: {e}")
-    
+
     # Get categories from Odoo to check what's downloaded
     categories = await odoo.get_sets()
     downloaded_map: dict[str, int] = {}
     for c in categories:
         name = c.get("name", "").lower()
         downloaded_map[name] = c.get("product_count", 0)
-    
+
     sets: list[SetInfo] = []
     for s in tcgdex_sets:
         set_id = s.get("id", "")
         set_name = s.get("name", "")
         set_series = s.get("series", {})
         series_name = set_series.get("name") if isinstance(set_series, dict) else None
-        
+
         # Check if downloaded (category exists in Odoo)
         is_downloaded = False
         downloaded_count = 0
@@ -101,40 +100,44 @@ async def get_available_sets(
                 is_downloaded = True
                 downloaded_count = count
                 break
-        
+
         # Apply filters
         if show_downloaded and not is_downloaded:
             continue
-        
+
         if search:
             search_lower = search.lower()
-            if (search_lower not in set_id.lower() and 
-                search_lower not in set_name.lower() and
-                (not series_name or search_lower not in series_name.lower())):
+            if (
+                search_lower not in set_id.lower()
+                and search_lower not in set_name.lower()
+                and (not series_name or search_lower not in series_name.lower())
+            ):
                 continue
-        
+
         if series:
             if not series_name or series.lower() not in series_name.lower():
                 continue
-        
+
         # Get card count from TCGdex data
         card_count = s.get("cardCount", {})
         total_cards = card_count.get("total", 0) if isinstance(card_count, dict) else 0
-        
-        sets.append(SetInfo(
-            code=set_id,
-            name=set_name,
-            series=series_name,
-            release_date=s.get("releaseDate"),
-            card_count=total_cards,
-            downloaded=is_downloaded,
-            downloaded_count=downloaded_count,
-            logo_url=s.get("logo"),
-        ))
-    
+
+        sets.append(
+            SetInfo(
+                code=set_id,
+                name=set_name,
+                series=series_name,
+                release_date=s.get("releaseDate"),
+                card_count=total_cards,
+                downloaded=is_downloaded,
+                downloaded_count=downloaded_count,
+                logo_url=s.get("logo"),
+            )
+        )
+
     # Sort by release date (newest first)
     sets.sort(key=lambda s: s.release_date or "", reverse=True)
-    
+
     return SetListResponse(sets=sets, total=len(sets))
 
 
@@ -145,13 +148,13 @@ async def get_series() -> list[str]:
         tcgdex_sets = await fetch_tcgdex_sets()
     except Exception:
         return []
-    
+
     series_set = set()
     for s in tcgdex_sets:
         series = s.get("series", {})
         if isinstance(series, dict) and series.get("name"):
             series_set.add(series["name"])
-    
+
     return sorted(series_set)
 
 
@@ -171,7 +174,7 @@ async def import_set_endpoint(
 ) -> ImportResponse:
     """Start importing a set from TCGdex in the background."""
     set_code = request.set_code.lower()
-    
+
     # Check if already importing
     if set_code in _import_status and _import_status[set_code].get("status") == "importing":
         return ImportResponse(
@@ -180,13 +183,13 @@ async def import_set_endpoint(
             set_code=set_code,
             status="importing",
         )
-    
+
     # Verify set exists
     try:
         set_data = await fetch_tcgdex_set_detail(set_code)
     except Exception:
         raise HTTPException(status_code=404, detail=f"Set not found: {set_code}")
-    
+
     # Queue the import
     _import_status[set_code] = {
         "status": "queued",
@@ -195,9 +198,9 @@ async def import_set_endpoint(
         "skipped": 0,
         "errors": 0,
     }
-    
+
     background_tasks.add_task(run_tcgdex_import, set_code, set_data)
-    
+
     return ImportResponse(
         success=True,
         message=f"Import started for {set_data.get('name', set_code)}",
@@ -209,7 +212,7 @@ async def import_set_endpoint(
 async def run_tcgdex_import(set_code: str, set_data: dict):
     """Run the actual import from TCGdex in the background."""
     from ..services import get_odoo_service
-    
+
     _import_status[set_code] = {
         "status": "importing",
         "message": "Fetching card data...",
@@ -217,14 +220,14 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
         "skipped": 0,
         "errors": 0,
     }
-    
+
     try:
         odoo = get_odoo_service()
         await odoo.connect()
-        
+
         set_name = set_data.get("name", set_code)
         cards = set_data.get("cards", [])
-        
+
         # Get or create category
         categories = await odoo.search_read(
             "product.category",
@@ -232,7 +235,7 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
             ["id", "name"],
             limit=1,
         )
-        
+
         if categories:
             category_id = categories[0]["id"]
         else:
@@ -242,22 +245,24 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
                 "create",
                 {"name": f"Pokemon / {set_name}"},
             )
-        
+
         created = 0
         skipped = 0
         errors = 0
-        
+
         async with httpx.AsyncClient(timeout=30) as client:
             for i, card in enumerate(cards):
                 card_id = card.get("id", "")
                 card_name = card.get("name", "Unknown")
                 local_id = card.get("localId", "")
-                
-                _import_status[set_code]["message"] = f"Processing {i+1}/{len(cards)}: {card_name}"
-                
+
+                _import_status[set_code]["message"] = (
+                    f"Processing {i + 1}/{len(cards)}: {card_name}"
+                )
+
                 sku = f"{set_code}-{local_id}".lower()
                 display_name = f"{card_name} ({local_id})"
-                
+
                 # Check if exists
                 existing = await odoo.search_read(
                     "product.product",
@@ -265,11 +270,11 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
                     ["id"],
                     limit=1,
                 )
-                
+
                 if existing:
                     skipped += 1
                     continue
-                
+
                 # Fetch card details for image
                 image_b64 = None
                 try:
@@ -284,7 +289,7 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
                                 image_b64 = base64.b64encode(img_resp.content).decode()
                 except Exception:
                     pass  # Skip image on error
-                
+
                 # Create product
                 try:
                     await odoo._execute(
@@ -300,13 +305,13 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
                         },
                     )
                     created += 1
-                except Exception as e:
+                except Exception:
                     errors += 1
-                
+
                 _import_status[set_code]["created"] = created
                 _import_status[set_code]["skipped"] = skipped
                 _import_status[set_code]["errors"] = errors
-        
+
         _import_status[set_code] = {
             "status": "complete",
             "message": f"Import complete! Created {created} cards.",
@@ -314,7 +319,7 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
             "skipped": skipped,
             "errors": errors,
         }
-        
+
     except Exception as e:
         _import_status[set_code] = {
             "status": "error",

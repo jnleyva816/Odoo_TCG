@@ -141,7 +141,9 @@ def import_set(
     # Delete existing if requested
     if delete_existing and not dry_run:
         console.print("[yellow]Deleting existing products...[/yellow]")
-        existing = odoo.search("product.product", [("default_code", "like", f"{set_code.lower()}-")])
+        existing = odoo.search(
+            "product.product", [("default_code", "like", f"{set_code.lower()}-")]
+        )
         if existing:
             odoo.unlink("product.product", existing)
             console.print(f"[yellow]Deleted {len(existing)} existing products[/yellow]")
@@ -149,7 +151,7 @@ def import_set(
     # Process cards
     stats = {"created": 0, "skipped": 0, "errors": 0}
     variants = ["Normal", "Holofoil", "Reverse Holofoil"]
-    
+
     # Get next barcode sequence number
     if not dry_run:
         next_barcode_seq = get_next_sequence(odoo)
@@ -191,7 +193,9 @@ def import_set(
                     continue
 
                 if dry_run:
-                    console.print(f"  [dim]Would create: {display_name} ({sku}) @ ${price:.2f}[/dim]")
+                    console.print(
+                        f"  [dim]Would create: {display_name} ({sku}) @ ${price:.2f}[/dim]"
+                    )
                     stats["created"] += 1
                     continue
 
@@ -210,7 +214,7 @@ def import_set(
                 try:
                     barcode = generate_ean13(next_barcode_seq)
                     next_barcode_seq += 1
-                    
+
                     # Base product data (standard Odoo fields only)
                     product_data = {
                         "name": display_name,
@@ -221,7 +225,7 @@ def import_set(
                         "type": "product",
                         "image_1920": image_b64,
                     }
-                    
+
                     # Store rarity and set name in description if custom fields don't exist
                     # This ensures data is preserved even without custom fields
                     description_parts = []
@@ -231,18 +235,16 @@ def import_set(
                         description_parts.append(f"Set: {set_name}")
                     if description_parts:
                         product_data["description"] = "\n".join(description_parts)
-                    
+
                     odoo.create("product.product", product_data)
                     stats["created"] += 1
                 except Exception as e:
                     logger.error(f"Failed to create {sku}: {e}")
                     stats["errors"] += 1
 
-    console.print(f"\n[bold green]Import complete![/bold green]")
+    console.print("\n[bold green]Import complete![/bold green]")
     console.print(f"  Created: {stats['created']}")
     console.print(f"  Skipped: {stats['skipped']}")
     console.print(f"  Errors: {stats['errors']}")
 
     return stats
-
-

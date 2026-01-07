@@ -154,12 +154,10 @@ def sync_all_prices(dry_run: bool = False) -> dict:
 
             progress.update(task, advance=1)
 
-    console.print(f"\n[bold green]Sync complete![/bold green]")
+    console.print("\n[bold green]Sync complete![/bold green]")
     console.print(f"  Updated: {total_stats['updated']}")
     console.print(f"  Unchanged: {total_stats['skipped']}")
     console.print(f"  Not found: {total_stats['not_found']}")
     console.print(f"  Errors: {total_stats['errors']}")
 
     return total_stats
-
-

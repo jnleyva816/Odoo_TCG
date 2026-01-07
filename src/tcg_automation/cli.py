@@ -28,7 +28,7 @@ def setup_logging(verbose: bool = False):
     logging.basicConfig(
         level=level,
         format="%(message)s",
-        handlers=[RichHandler(console=console, show_time=False, show_path=False)]
+        handlers=[RichHandler(console=console, show_time=False, show_path=False)],
     )
 
 
@@ -64,7 +64,8 @@ def import_set(set_code, dry_run, delete_existing, skip_images):
         tcg import me02 --dry-run
         tcg import sv03 --delete-existing
     """
-    from .commands.import_set import import_set as do_import, SET_MAPPINGS
+    from .commands.import_set import SET_MAPPINGS
+    from .commands.import_set import import_set as do_import
 
     if set_code.lower() == "list":
         console.print("[bold]Available sets:[/bold]")
@@ -86,7 +87,9 @@ def list_sets():
 
     console.print("[bold]Available sets:[/bold]\n")
     for code, info in sorted(SET_MAPPINGS.items()):
-        console.print(f"  [cyan]{code.upper():6}[/cyan] - {info['name']} (Group ID: {info['group_id']})")
+        console.print(
+            f"  [cyan]{code.upper():6}[/cyan] - {info['name']} (Group ID: {info['group_id']})"
+        )
 
 
 # =============================================================================
@@ -144,6 +147,7 @@ def server(host, port, no_debug):
         tcg server --host 127.0.0.1 --no-debug
     """
     from .commands.server import run_server
+
     run_server(host, port, debug=not no_debug)
 
 
@@ -323,5 +327,3 @@ def status():
 
 if __name__ == "__main__":
     main()
-
-

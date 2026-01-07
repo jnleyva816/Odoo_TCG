@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Search, X, Plus, Printer, Loader2, Package } from 'lucide-react'
+import { Search, X, Plus, Minus, Printer, Loader2, Package } from 'lucide-react'
 import { searchCards, adjustStock, Card } from '../api/client'
 import CardImage from '../components/CardImage'
 

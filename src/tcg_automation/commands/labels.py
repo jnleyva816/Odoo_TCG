@@ -33,9 +33,9 @@ def parse_sku(sku: str) -> dict:
 def clean_card_name(name: str) -> str:
     """Clean card name to show just name and number."""
     # Remove ALL non-printable ASCII
-    clean = re.sub(r'[^a-zA-Z0-9\s\(\)\-\']', '', name)
+    clean = re.sub(r"[^a-zA-Z0-9\s\(\)\-\']", "", name)
     # Find pattern like (001), (025), (123) and stop there
-    match = re.search(r'^(.+?\(\d{2,3}\))', clean)
+    match = re.search(r"^(.+?\(\d{2,3}\))", clean)
     if match:
         return match.group(1).strip()
     return clean.strip()[:25]
@@ -44,10 +44,7 @@ def clean_card_name(name: str) -> str:
 def generate_qr_code(data: str, size: int = 100) -> Image.Image:
     """Generate QR code as PIL Image."""
     qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=1
+        version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=1
     )
     qr.add_data(data)
     qr.make(fit=True)
@@ -83,7 +80,7 @@ def generate_label(product: dict) -> bytes:
     qr_img = generate_qr_code(qr_url, size=int(qr_size * 4))
 
     qr_buffer = io.BytesIO()
-    qr_img.save(qr_buffer, format='PNG')
+    qr_img.save(qr_buffer, format="PNG")
     qr_buffer.seek(0)
 
     c.drawImage(ImageReader(qr_buffer), qr_x, qr_y, width=qr_size, height=qr_size)
@@ -145,7 +142,7 @@ def generate_labels_pdf(products: list[dict], output_path: str = "labels.pdf") -
         y = page_height - margin - (row + 1) * label_height
 
         # Generate individual label as sub-canvas
-        label_bytes = generate_label(product)
+        generate_label(product)
         # For simplicity, we'll draw directly
         sku = product.get("default_code", "")
         name = product.get("name", "Unknown")
@@ -153,13 +150,15 @@ def generate_labels_pdf(products: list[dict], output_path: str = "labels.pdf") -
         display_name = clean_card_name(name)[:17]
 
         c.setFont("Helvetica-Bold", 5)
-        c.drawString(x + 1*mm, y + label_height - 3*mm, display_name)
+        c.drawString(x + 1 * mm, y + label_height - 3 * mm, display_name)
 
         c.setFont("Helvetica", 4)
-        c.drawString(x + 1*mm, y + label_height - 6*mm, f"{sku_info['set_code']} | {sku_info['variant']}")
+        c.drawString(
+            x + 1 * mm, y + label_height - 6 * mm, f"{sku_info['set_code']} | {sku_info['variant']}"
+        )
 
         c.setFont("Helvetica", 4)
-        c.drawString(x + 1*mm, y + 1*mm, sku)
+        c.drawString(x + 1 * mm, y + 1 * mm, sku)
 
     c.save()
     buffer.seek(0)
@@ -168,5 +167,3 @@ def generate_labels_pdf(products: list[dict], output_path: str = "labels.pdf") -
         f.write(buffer.getvalue())
 
     return output_path
-
-

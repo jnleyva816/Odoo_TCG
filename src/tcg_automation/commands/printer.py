@@ -3,29 +3,27 @@ Brother QL label printer integration.
 Supports direct printing to Brother QL-800W network printer.
 """
 
-import io
 import logging
 import socket
-from typing import Optional
 
 from PIL import Image, ImageDraw, ImageFont
 
 from ..config import get_config
-from .labels import parse_sku, clean_card_name
+from .labels import clean_card_name, parse_sku
 
 logger = logging.getLogger(__name__)
 
 # Label dimensions for different sizes (width x height in pixels at 300dpi)
 # For continuous labels, width is the tape width, height is variable
 LABEL_SIZES = {
-    "29x90": (991, 306),   # 29mm x 90mm (standard address label)
-    "62": (696, 450),      # 62mm continuous (variable height)
-    "29": (306, 991),      # 29mm continuous (~1.1" x 3.3" - rotated for length)
-    "38x90": (991, 403),   # 38mm x 90mm
-    "62x29": (306, 696),   # 62mm x 29mm
-    "62x100": (1109, 696), # 62mm x 100mm
-    "17x54": (566, 165),   # 17mm x 54mm
-    "17x87": (956, 165),   # 17mm x 87mm
+    "29x90": (991, 306),  # 29mm x 90mm (standard address label)
+    "62": (696, 450),  # 62mm continuous (variable height)
+    "29": (306, 991),  # 29mm continuous (~1.1" x 3.3" - rotated for length)
+    "38x90": (991, 403),  # 38mm x 90mm
+    "62x29": (306, 696),  # 62mm x 29mm
+    "62x100": (1109, 696),  # 62mm x 100mm
+    "17x54": (566, 165),  # 17mm x 54mm
+    "17x87": (956, 165),  # 17mm x 87mm
 }
 
 
@@ -70,7 +68,7 @@ class BrotherQLPrinter:
     def create_label_image(self, product: dict) -> Image.Image:
         """Create a label image for a product."""
         label_size = self.config.label_size
-        
+
         # Get dimensions for the label
         if label_size in LABEL_SIZES:
             width, height = LABEL_SIZES[label_size]
@@ -89,17 +87,23 @@ class BrotherQLPrinter:
 
         # Clean the card name
         display_name = clean_card_name(name)
-        
+
         # For narrow labels (29mm), use smaller fonts and vertical layout
         is_narrow = width <= 350
-        
+
         if is_narrow:
             # Vertical layout for 29mm continuous tape
             # Fonts sized for narrow tape
             try:
-                font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
-                font_medium = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
-                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+                font_large = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24
+                )
+                font_medium = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18
+                )
+                font_small = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16
+                )
             except OSError:
                 try:
                     font_large = ImageFont.truetype("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", 24)
@@ -116,13 +120,15 @@ class BrotherQLPrinter:
             # Truncate name to fit narrow width
             max_chars = 18
             if len(display_name) > max_chars:
-                display_name = display_name[:max_chars-2] + ".."
+                display_name = display_name[: max_chars - 2] + ".."
 
             # Price (top, prominent)
             price_text = f"${price:.2f}"
             price_bbox = draw.textbbox((0, 0), price_text, font=font_large)
             price_width = price_bbox[2] - price_bbox[0]
-            draw.text(((width - price_width) // 2, y_pos), price_text, font=font_large, fill="black")
+            draw.text(
+                ((width - price_width) // 2, y_pos), price_text, font=font_large, fill="black"
+            )
             y_pos += 32
 
             # Divider line
@@ -132,7 +138,9 @@ class BrotherQLPrinter:
             # Card name (bold, centered)
             name_bbox = draw.textbbox((0, 0), display_name, font=font_medium)
             name_width = name_bbox[2] - name_bbox[0]
-            draw.text(((width - name_width) // 2, y_pos), display_name, font=font_medium, fill="black")
+            draw.text(
+                ((width - name_width) // 2, y_pos), display_name, font=font_medium, fill="black"
+            )
             y_pos += 26
 
             # Set code and variant
@@ -163,9 +171,15 @@ class BrotherQLPrinter:
                 display_name = display_name[:27] + "..."
 
             try:
-                font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
-                font_medium = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
-                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+                font_large = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32
+                )
+                font_medium = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24
+                )
+                font_small = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20
+                )
             except OSError:
                 try:
                     font_large = ImageFont.truetype("/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", 32)
@@ -195,7 +209,9 @@ class BrotherQLPrinter:
             price_text = f"${price:.2f}"
             price_bbox = draw.textbbox((0, 0), price_text, font=font_large)
             price_width = price_bbox[2] - price_bbox[0]
-            draw.text((width - padding - price_width, padding), price_text, font=font_large, fill="black")
+            draw.text(
+                (width - padding - price_width, padding), price_text, font=font_large, fill="black"
+            )
 
             # Draw barcode at bottom
             barcode_y = height - 50
@@ -204,7 +220,9 @@ class BrotherQLPrinter:
 
         return image
 
-    def _draw_barcode(self, draw: ImageDraw.Draw, data: str, x: int, y: int, width: int, height: int):
+    def _draw_barcode(
+        self, draw: ImageDraw.Draw, data: str, x: int, y: int, width: int, height: int
+    ):
         """Draw a simple Code 128-style barcode pattern."""
         # Simple barcode visualization using the data characters
         bar_width = max(2, width // (len(data) * 11 + 35))
@@ -222,7 +240,9 @@ class BrotherQLPrinter:
             for i in range(6):
                 bar_size = (char_val + i) % 4 + 1
                 color = "black" if i % 2 == 0 else "white"
-                draw.rectangle([current_x, y, current_x + bar_size * bar_width, y + height], fill=color)
+                draw.rectangle(
+                    [current_x, y, current_x + bar_size * bar_width, y + height], fill=color
+                )
                 current_x += bar_size * bar_width
                 if current_x > x + width - 20:
                     break
@@ -250,9 +270,9 @@ class BrotherQLPrinter:
 
         try:
             # Import brother_ql components
+            from brother_ql.backends.network import BrotherQLBackendNetwork
             from brother_ql.conversion import convert
             from brother_ql.raster import BrotherQLRaster
-            from brother_ql.backends.network import BrotherQLBackendNetwork
 
             # Create the label image
             image = self.create_label_image(product)
@@ -319,9 +339,9 @@ class BrotherQLPrinter:
             return False, f"Cannot connect to printer at {self.config.ip}:{self.config.port}"
 
         try:
+            from brother_ql.backends.network import BrotherQLBackendNetwork
             from brother_ql.conversion import convert
             from brother_ql.raster import BrotherQLRaster
-            from brother_ql.backends.network import BrotherQLBackendNetwork
 
             qlr = BrotherQLRaster(self.config.model)
             qlr.exception_on_warning = True
@@ -349,7 +369,7 @@ class BrotherQLPrinter:
 
             return True, "Label printed successfully"
 
-        except ImportError as e:
+        except ImportError:
             return False, "brother_ql library not installed"
         except Exception as e:
             logger.error(f"Print failed: {e}")
@@ -366,4 +386,3 @@ def get_printer() -> BrotherQLPrinter:
     if _printer is None:
         _printer = BrotherQLPrinter()
     return _printer
-

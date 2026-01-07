@@ -7,7 +7,6 @@ import io
 import logging
 import threading
 import time
-from functools import lru_cache
 
 from flask import Flask, Response, jsonify, request, send_file
 from flask_cors import CORS
@@ -31,7 +30,7 @@ IMAGE_CACHE_MAX_SIZE = 1000  # Max cached images
 
 def get_thread_odoo():
     """Get thread-local Odoo client."""
-    if not hasattr(_thread_local, 'odoo') or _thread_local.odoo is None:
+    if not hasattr(_thread_local, "odoo") or _thread_local.odoo is None:
         _thread_local.odoo = OdooClient()
     return _thread_local.odoo
 
@@ -55,7 +54,7 @@ def set_cached_image(product_id: int, data: bytes):
         if len(_image_cache) >= IMAGE_CACHE_MAX_SIZE:
             # Remove oldest 10%
             sorted_items = sorted(_image_cache.items(), key=lambda x: x[1][1])
-            for key, _ in sorted_items[:IMAGE_CACHE_MAX_SIZE // 10]:
+            for key, _ in sorted_items[: IMAGE_CACHE_MAX_SIZE // 10]:
                 del _image_cache[key]
         _image_cache[product_id] = (data, time.time())
 
@@ -72,13 +71,14 @@ def create_app() -> Flask:
     CORS(app)
 
     # Main Odoo client (for non-threaded operations)
-    main_odoo = OdooClient()
+    OdooClient()
 
     @app.route("/")
     def index():
         """Serve the scanner page."""
         try:
             from ..web import SCANNER_HTML
+
             if SCANNER_HTML:
                 return SCANNER_HTML
         except ImportError:
@@ -100,10 +100,7 @@ def create_app() -> Flask:
         """Check server and Odoo status."""
         odoo = get_thread_odoo()
         connected = odoo.connect()
-        return jsonify({
-            "server": "running",
-            "odoo": "connected" if connected else "disconnected"
-        })
+        return jsonify({"server": "running", "odoo": "connected" if connected else "disconnected"})
 
     @app.route("/api/search")
     def search_products():
@@ -120,10 +117,12 @@ def create_app() -> Flask:
             return jsonify({"results": []})
 
         # Build search domain
-        domain = ["|", "|",
+        domain = [
+            "|",
+            "|",
             ("name", "ilike", query),
             ("default_code", "ilike", query),
-            ("default_code", "ilike", f"-{query}")
+            ("default_code", "ilike", f"-{query}"),
         ]
 
         if set_filter:
@@ -134,7 +133,7 @@ def create_app() -> Flask:
             "product.product",
             domain,
             ["id", "name", "default_code", "qty_available", "list_price"],
-            limit=100  # Limit initial fetch
+            limit=100,  # Limit initial fetch
         )
 
         # Sort by relevance
@@ -161,15 +160,17 @@ def create_app() -> Flask:
             sku = p.get("default_code", "")
             sku_info = parse_sku(sku)
 
-            results.append({
-                "id": p["id"],
-                "sku": sku,
-                "name": p["name"],
-                "set": sku_info["set_code"],
-                "variant": sku_info["variant"],
-                "quantity": p["qty_available"],
-                "price": p["list_price"],
-            })
+            results.append(
+                {
+                    "id": p["id"],
+                    "sku": sku,
+                    "name": p["name"],
+                    "set": sku_info["set_code"],
+                    "variant": sku_info["variant"],
+                    "quantity": p["qty_available"],
+                    "price": p["list_price"],
+                }
+            )
 
         return jsonify({"results": results})
 
@@ -196,13 +197,15 @@ def create_app() -> Flask:
         updated = odoo.get_product_by_sku(sku)
         new_qty = updated["qty_available"] if updated else 0
 
-        return jsonify({
-            "success": True,
-            "sku": sku,
-            "name": product["name"],
-            "quantity": new_qty,
-            "message": f"Added {sku} to inventory (Qty: {new_qty})"
-        })
+        return jsonify(
+            {
+                "success": True,
+                "sku": sku,
+                "name": product["name"],
+                "quantity": new_qty,
+                "message": f"Added {sku} to inventory (Qty: {new_qty})",
+            }
+        )
 
     @app.route("/api/print-label", methods=["GET", "POST"])
     def print_label():
@@ -230,7 +233,7 @@ def create_app() -> Flask:
             io.BytesIO(pdf_bytes),
             mimetype="application/pdf",
             as_attachment=False,
-            download_name=f"label_{sku}.pdf"
+            download_name=f"label_{sku}.pdf",
         )
 
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -249,12 +252,9 @@ def create_app() -> Flask:
     def printer_print():
         """Print label directly to Brother QL printer."""
         printer = get_printer()
-        
+
         if not printer.is_available:
-            return jsonify({
-                "success": False,
-                "error": "Printer not configured or disabled"
-            }), 503
+            return jsonify({"success": False, "error": "Printer not configured or disabled"}), 503
 
         odoo = get_thread_odoo()
         if not odoo.connect():
@@ -271,7 +271,7 @@ def create_app() -> Flask:
             return jsonify({"success": False, "error": f"Product not found: {sku}"}), 404
 
         success, message = printer.print_label(product)
-        
+
         if success:
             return jsonify({"success": True, "message": message})
         else:
@@ -281,12 +281,9 @@ def create_app() -> Flask:
     def printer_print_batch():
         """Print multiple labels to Brother QL printer."""
         printer = get_printer()
-        
+
         if not printer.is_available:
-            return jsonify({
-                "success": False,
-                "error": "Printer not configured or disabled"
-            }), 503
+            return jsonify({"success": False, "error": "Printer not configured or disabled"}), 503
 
         odoo = get_thread_odoo()
         if not odoo.connect():
@@ -300,7 +297,7 @@ def create_app() -> Flask:
 
         results = []
         success_count = 0
-        
+
         for sku in skus:
             product = odoo.get_product_by_sku(sku)
             if not product:
@@ -308,17 +305,26 @@ def create_app() -> Flask:
                 continue
 
             success, message = printer.print_label(product)
-            results.append({"sku": sku, "success": success, "message": message if success else None, "error": message if not success else None})
+            results.append(
+                {
+                    "sku": sku,
+                    "success": success,
+                    "message": message if success else None,
+                    "error": message if not success else None,
+                }
+            )
             if success:
                 success_count += 1
 
-        return jsonify({
-            "success": success_count > 0,
-            "total": len(skus),
-            "printed": success_count,
-            "failed": len(skus) - success_count,
-            "results": results
-        })
+        return jsonify(
+            {
+                "success": success_count > 0,
+                "total": len(skus),
+                "printed": success_count,
+                "failed": len(skus) - success_count,
+                "results": results,
+            }
+        )
 
     @app.route("/api/inventory")
     def get_inventory():
@@ -365,7 +371,7 @@ def create_app() -> Flask:
             fields=["id", "name", "default_code", "qty_available", "list_price"],
             limit=per_page,
             offset=offset,
-            order=odoo_order
+            order=odoo_order,
         )
 
         # Format results
@@ -373,23 +379,27 @@ def create_app() -> Flask:
         for p in products:
             sku = p.get("default_code", "")
             sku_info = parse_sku(sku)
-            results.append({
-                "id": p["id"],
-                "sku": sku,
-                "name": p["name"],
-                "set": sku_info["set_code"],
-                "variant": sku_info["variant"],
-                "quantity": p["qty_available"],
-                "price": p["list_price"],
-            })
+            results.append(
+                {
+                    "id": p["id"],
+                    "sku": sku,
+                    "name": p["name"],
+                    "set": sku_info["set_code"],
+                    "variant": sku_info["variant"],
+                    "quantity": p["qty_available"],
+                    "price": p["list_price"],
+                }
+            )
 
-        return jsonify({
-            "results": results,
-            "total": total,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": (total + per_page - 1) // per_page if total > 0 else 1
-        })
+        return jsonify(
+            {
+                "results": results,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": (total + per_page - 1) // per_page if total > 0 else 1,
+            }
+        )
 
     @app.route("/api/sets")
     def get_sets():
@@ -400,9 +410,7 @@ def create_app() -> Flask:
 
         # Get Pokemon categories with product counts in one query
         categories = odoo.search_read(
-            "product.category",
-            [("parent_id.name", "=", "Pokemon")],
-            ["name"]
+            "product.category", [("parent_id.name", "=", "Pokemon")], ["name"]
         )
 
         sets = []
@@ -412,14 +420,10 @@ def create_app() -> Flask:
                 code = name.split(":")[0].strip().lower()
             else:
                 code = name.lower().replace(" ", "")
-            
+
             count = len(odoo.search("product.product", [("categ_id", "=", cat["id"])]))
             if count > 0:
-                sets.append({
-                    "code": code,
-                    "name": name,
-                    "count": count
-                })
+                sets.append({"code": code, "name": name, "count": count})
 
         return jsonify({"sets": sets})
 
@@ -434,12 +438,14 @@ def create_app() -> Flask:
         if not product:
             return jsonify({"error": f"Product not found: {sku}"}), 404
 
-        return jsonify({
-            "sku": product["default_code"],
-            "name": product["name"],
-            "quantity": product["qty_available"],
-            "price": product["list_price"],
-        })
+        return jsonify(
+            {
+                "sku": product["default_code"],
+                "name": product["name"],
+                "quantity": product["qty_available"],
+                "price": product["list_price"],
+            }
+        )
 
     @app.route("/api/image/<int:product_id>")
     def get_product_image(product_id):
@@ -461,14 +467,14 @@ def create_app() -> Flask:
             products = odoo.read(
                 "product.product",
                 [product_id],
-                ["image_128"]  # Use smaller 128px thumbnail for speed
+                ["image_128"],  # Use smaller 128px thumbnail for speed
             )
 
             if not products or not products[0].get("image_128"):
                 return Response(PLACEHOLDER_IMAGE, mimetype="image/png")
 
             image_data = base64.b64decode(products[0]["image_128"])
-            
+
             # Cache the image
             set_cached_image(product_id, image_data)
 
@@ -497,22 +503,18 @@ def create_app() -> Flask:
         # Check cache for each
         result = {}
         uncached_ids = []
-        
+
         for pid in product_ids:
             cached = get_cached_image(pid)
             if cached is not None:
-                result[pid] = base64.b64encode(cached).decode('ascii')
+                result[pid] = base64.b64encode(cached).decode("ascii")
             else:
                 uncached_ids.append(pid)
 
         # Fetch uncached from Odoo in one call
         if uncached_ids:
             try:
-                products = odoo.read(
-                    "product.product",
-                    uncached_ids,
-                    ["image_128"]
-                )
+                products = odoo.read("product.product", uncached_ids, ["image_128"])
                 for p in products:
                     pid = p["id"]
                     if p.get("image_128"):

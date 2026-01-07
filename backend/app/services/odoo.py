@@ -218,13 +218,13 @@ class OdooService:
         """Get paginated inventory with filtering, searching, and sorting."""
         # Build domain
         domain: list[Any] = []
-        
+
         # Search filter
         if search:
             domain.append("|")
             domain.append(("default_code", "ilike", search))
             domain.append(("name", "ilike", search))
-        
+
         if set_id:
             domain.append(("categ_id", "=", set_id))
         if stock_filter == "in_stock":

@@ -1,3 +1,1 @@
 """TCG Automation CLI commands."""
-
-

@@ -5,7 +5,6 @@ Uses environment variables with dotenv support.
 
 import os
 from dataclasses import dataclass
-from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -16,6 +15,7 @@ load_dotenv()
 @dataclass
 class OdooConfig:
     """Odoo connection configuration."""
+
     url: str
     db: str
     user: str
@@ -39,6 +39,7 @@ class OdooConfig:
 @dataclass
 class ServerConfig:
     """Web server configuration."""
+
     host: str
     port: int
 
@@ -53,6 +54,7 @@ class ServerConfig:
 @dataclass
 class PrinterConfig:
     """Brother QL label printer configuration."""
+
     ip: str
     port: int
     model: str
@@ -77,6 +79,7 @@ class PrinterConfig:
 @dataclass
 class Config:
     """Main application configuration."""
+
     odoo: OdooConfig
     server: ServerConfig
     printer: PrinterConfig
@@ -101,5 +104,3 @@ def get_config() -> Config:
     if _config is None:
         _config = Config.load()
     return _config
-
-

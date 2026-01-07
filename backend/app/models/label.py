@@ -16,6 +16,3 @@ class LabelResponse(BaseModel):
     success: bool = Field(..., description="Whether print was successful")
     message: str = Field(..., description="Status message")
     pdf_base64: str | None = Field(None, description="Base64 encoded PDF for preview")
-
-
-
