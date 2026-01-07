@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,8 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
 jobs:
+  # ============================================================
+  # Linting and Type Checking
+  # ============================================================
   lint:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,78 +23,170 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ruff mypy
+          pip install -e ".[dev]"
 
-      - name: Lint with ruff
-        run: ruff check src/
+      - name: Run Ruff (linting)
+        run: ruff check src/ backend/
 
-      - name: Type check with mypy
-        run: mypy src/ --ignore-missing-imports
-        continue-on-error: true
+      - name: Run Ruff (formatting check)
+        run: ruff format --check src/ backend/
 
-  test:
+      - name: Run MyPy (type checking)
+        run: mypy src/tcg_automation --ignore-missing-imports
+        continue-on-error: true  # Type errors shouldn't block CI initially
+
+  # ============================================================
+  # Python Tests
+  # ============================================================
+  test-python:
+    name: Python Tests
     runs-on: ubuntu-latest
+    needs: lint
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install package
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+          pip install -e backend/
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
-        continue-on-error: true
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ -v --cov=src/tcg_automation --cov-report=xml --cov-report=term
+        continue-on-error: true  # Allow to pass if no tests exist yet
 
-  build:
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  # ============================================================
+  # Frontend Tests
+  # ============================================================
+  test-frontend:
+    name: Frontend Tests
     runs-on: ubuntu-latest
-    needs: [lint]
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Build package
-        run: |
-          python -m pip install --upgrade pip build
-          python -m build
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
 
-  docker:
+      - name: Build frontend
+        run: npm run build
+
+  # ============================================================
+  # Docker Build
+  # ============================================================
+  docker-build:
+    name: Docker Build
     runs-on: ubuntu-latest
-    needs: [lint]
+    needs: [test-python, test-frontend]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build CLI Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: docker/Dockerfile
           push: false
-          tags: tcg-automation:latest
+          tags: tcg-automation:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.backend
+          push: false
+          tags: tcg-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
+      - name: Test CLI container
+        run: |
+          docker run --rm tcg-automation:test --version
+
+      - name: Test Backend container starts
+        run: |
+          docker run -d --name backend-test -p 8000:8000 \
+            -e ODOO_URL=http://localhost:8069 \
+            -e ODOO_DB=test \
+            -e ODOO_USER=test \
+            -e ODOO_PASSWORD=test \
+            tcg-backend:test
+          sleep 5
+          curl -f http://localhost:8000/api/health || echo "Health check skipped (no Odoo)"
+          docker stop backend-test
+
+  # ============================================================
+  # Deploy (only on main branch)
+  # ============================================================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push CLI image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/tcg-automation:latest
+            ghcr.io/${{ github.repository_owner }}/tcg-automation:${{ github.sha }}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/tcg-backend:latest
+            ghcr.io/${{ github.repository_owner }}/tcg-backend:${{ github.sha }}

@@ -63,7 +63,7 @@ def create_app() -> FastAPI:
     async def health_check():
         """Health check endpoint."""
         odoo = get_odoo_service()
-        odoo_connected = odoo._uid is not None
+        odoo_connected = odoo._connected
 
         return {
             "status": "healthy",
