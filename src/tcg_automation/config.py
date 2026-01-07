@@ -51,10 +51,35 @@ class ServerConfig:
 
 
 @dataclass
+class PrinterConfig:
+    """Brother QL label printer configuration."""
+    ip: str
+    port: int
+    model: str
+    label_size: str
+    enabled: bool
+
+    @classmethod
+    def from_env(cls) -> "PrinterConfig":
+        return cls(
+            ip=os.getenv("PRINTER_IP", ""),
+            port=int(os.getenv("PRINTER_PORT", "9100")),
+            model=os.getenv("PRINTER_MODEL", "QL-800"),
+            label_size=os.getenv("PRINTER_LABEL_SIZE", "29"),
+            enabled=os.getenv("PRINTER_ENABLED", "false").lower() == "true",
+        )
+
+    def validate(self) -> bool:
+        """Check if printer is configured."""
+        return bool(self.ip) and self.enabled
+
+
+@dataclass
 class Config:
     """Main application configuration."""
     odoo: OdooConfig
     server: ServerConfig
+    printer: PrinterConfig
 
     @classmethod
     def load(cls) -> "Config":
@@ -62,6 +87,7 @@ class Config:
         return cls(
             odoo=OdooConfig.from_env(),
             server=ServerConfig.from_env(),
+            printer=PrinterConfig.from_env(),
         )
 
 

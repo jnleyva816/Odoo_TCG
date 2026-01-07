@@ -1,0 +1,51 @@
+"""Application configuration using Pydantic Settings."""
+
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Find the project root .env file
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_FILE) if _ENV_FILE.exists() else None,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # Odoo Connection
+    odoo_url: str = "http://localhost:8069"
+    odoo_db: str = "odoo"
+    odoo_user: str = ""
+    odoo_password: str = ""
+
+    # Server
+    server_host: str = "0.0.0.0"
+    server_port: int = 8000
+    debug: bool = True
+
+    # Cache
+    image_cache_ttl: int = 3600  # 1 hour
+    image_cache_max_size: int = 1000
+
+    # CORS
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+
+    # Brother QL Label Printer
+    printer_enabled: bool = False
+    printer_ip: str = ""
+    printer_port: int = 9100
+    printer_model: str = "QL-800"
+    printer_label_size: str = "29"  # 29mm continuous (1.1")
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()

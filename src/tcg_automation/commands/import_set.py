@@ -22,6 +22,7 @@ console = Console()
 SET_MAPPINGS = {
     # Scarlet & Violet Era
     "sv09": {"group_id": 23901, "name": "Journey Together"},
+    "me01": {"group_id": 24380, "name": "Mega Evolution"},
     "me02": {"group_id": 23783, "name": "Phantasmal Flames"},
     "sv08": {"group_id": 23779, "name": "Surging Sparks"},
     "sv07": {"group_id": 23654, "name": "Stellar Crown"},
@@ -47,8 +48,8 @@ def generate_sku(set_prefix: str, card_number: str, variant: str) -> str:
 
 def fetch_set_data(group_id: int) -> tuple[list[dict], list[dict]]:
     """Fetch product and price data from tcgcsv.com."""
-    products_url = f"https://tcgcsv.com/{group_id}/products"
-    prices_url = f"https://tcgcsv.com/{group_id}/prices"
+    products_url = f"https://tcgcsv.com/tcgplayer/{group_id}/products"
+    prices_url = f"https://tcgcsv.com/tcgplayer/{group_id}/prices"
 
     console.print(f"[blue]Fetching products from tcgcsv.com (Group {group_id})...[/blue]")
     products_resp = requests.get(products_url, timeout=30)
