@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ..odoo_client import get_odoo_client
+from .barcodes import generate_ean13, get_next_sequence
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -148,6 +149,13 @@ def import_set(
     # Process cards
     stats = {"created": 0, "skipped": 0, "errors": 0}
     variants = ["Normal", "Holofoil", "Reverse Holofoil"]
+    
+    # Get next barcode sequence number
+    if not dry_run:
+        next_barcode_seq = get_next_sequence(odoo)
+        console.print(f"[blue]Starting barcode sequence: {next_barcode_seq}[/blue]")
+    else:
+        next_barcode_seq = 1  # Dummy for dry run
 
     with Progress(
         SpinnerColumn(),
@@ -198,18 +206,33 @@ def import_set(
                 if not skip_images and image_url and variant == "Normal":
                     image_b64 = download_image(image_url)
 
-                # Create product
+                # Create product with EAN-13 barcode
                 try:
-                    odoo.create("product.product", {
+                    barcode = generate_ean13(next_barcode_seq)
+                    next_barcode_seq += 1
+                    
+                    # Base product data (standard Odoo fields only)
+                    product_data = {
                         "name": display_name,
                         "default_code": sku,
+                        "barcode": barcode,
                         "list_price": price,
                         "categ_id": category_id,
                         "type": "product",
                         "image_1920": image_b64,
-                        "x_rarity": card.get("rarityName", ""),
-                        "x_set_name": set_name,
-                    })
+                    }
+                    
+                    # Store rarity and set name in description if custom fields don't exist
+                    # This ensures data is preserved even without custom fields
+                    description_parts = []
+                    if card.get("rarityName"):
+                        description_parts.append(f"Rarity: {card.get('rarityName')}")
+                    if set_name:
+                        description_parts.append(f"Set: {set_name}")
+                    if description_parts:
+                        product_data["description"] = "\n".join(description_parts)
+                    
+                    odoo.create("product.product", product_data)
                     stats["created"] += 1
                 except Exception as e:
                     logger.error(f"Failed to create {sku}: {e}")

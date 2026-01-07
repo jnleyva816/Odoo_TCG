@@ -7,6 +7,8 @@ import socket
 from typing import Optional
 from urllib.parse import quote_plus
 
+import barcode
+from barcode.writer import ImageWriter
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 
@@ -84,6 +86,58 @@ def generate_qr_code(data: str, size: int = 100) -> Image.Image:
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
     return img.get_image().resize((size, size))
+
+
+def generate_ean13_image(ean13_code: str, width: int, height: int) -> Image.Image | None:
+    """Generate an EAN-13 barcode image using python-barcode.
+    
+    Args:
+        ean13_code: 13-digit EAN-13 barcode string
+        width: Desired width in pixels
+        height: Desired height in pixels
+    
+    Returns:
+        PIL Image of the barcode, or None if generation fails
+    """
+    if not ean13_code or len(ean13_code) != 13 or not ean13_code.isdigit():
+        logger.warning(f"Invalid EAN-13 code: {ean13_code}")
+        return None
+    
+    try:
+        # Create EAN-13 barcode (pass only first 12 digits, library calculates check digit)
+        # But we already have the full 13, so we use EAN13 which accepts full code
+        EAN13 = barcode.get_barcode_class('ean13')
+        
+        # Custom writer options for cleaner output
+        writer = ImageWriter()
+        
+        # Generate barcode - EAN13 expects 12 digits (calculates check digit itself)
+        # So we pass first 12 digits
+        ean = EAN13(ean13_code[:12], writer=writer)
+        
+        # Render to buffer
+        buffer = io.BytesIO()
+        ean.write(buffer, options={
+            'module_width': 0.4,      # Width of each bar
+            'module_height': 15.0,    # Height of bars in mm
+            'quiet_zone': 2.0,        # Whitespace on sides
+            'font_size': 10,          # Size of text below
+            'text_distance': 3.0,     # Distance from bars to text
+            'write_text': False,      # Don't include text (we draw SKU separately)
+        })
+        buffer.seek(0)
+        
+        # Load and resize
+        barcode_img = Image.open(buffer).convert('RGB')
+        
+        # Resize to fit our label area while maintaining aspect ratio
+        barcode_img = barcode_img.resize((width, height), Image.Resampling.LANCZOS)
+        
+        return barcode_img
+        
+    except Exception as e:
+        logger.error(f"Failed to generate EAN-13 barcode: {e}")
+        return None
 
 
 class PrinterService:
@@ -191,6 +245,7 @@ class PrinterService:
         price: float,
         set_name: str | None = None,
         variant: str | None = None,
+        barcode_ean13: str | None = None,
     ) -> Image.Image:
         """Create a label image matching the PDF preview layout.
         
@@ -198,9 +253,17 @@ class PrinterService:
         ┌─────────────────────────────────────────────────┬─────────┐
         │ Card Name (001)                                 │   QR    │
         │ SV09: Phantasmal Flames - Holo                  │  Code   │
-        │ ▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌ (barcode)                 │         │
+        │ ▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌ (EAN-13 barcode)          │         │
         │ SKU-001-HOLO                                    │         │
         └─────────────────────────────────────────────────┴─────────┘
+        
+        Args:
+            sku: Product SKU (internal reference)
+            name: Card name
+            price: Card price (not currently displayed)
+            set_name: Set name for display
+            variant: Card variant (Holo, Reverse, etc.)
+            barcode_ean13: EAN-13 barcode from Odoo (13 digits)
         """
         label_size = self._settings.printer_label_size
         
@@ -284,11 +347,23 @@ class PrinterService:
             draw.text((margin, padding_top + 30), set_display, font=font_set, fill="#444444")
 
         # === Barcode + SKU at bottom ===
-        barcode_height = 45
+        barcode_height = 50
         barcode_width = text_width
         # Position barcode near bottom with extra bottom padding
         barcode_y = height - padding_bottom - barcode_height - 20  # Leave room for SKU below
-        self._draw_barcode(draw, sku, margin, barcode_y, barcode_width, barcode_height)
+        
+        # Use EAN-13 barcode if provided, otherwise fall back to custom pattern
+        if barcode_ean13:
+            barcode_img = generate_ean13_image(barcode_ean13, barcode_width, barcode_height)
+            if barcode_img:
+                image.paste(barcode_img, (margin, barcode_y))
+                logger.info(f"Added EAN-13 barcode: {barcode_ean13}")
+            else:
+                # Fallback to custom barcode if EAN-13 generation failed
+                self._draw_barcode(draw, sku, margin, barcode_y, barcode_width, barcode_height)
+        else:
+            # No EAN-13 provided, use custom barcode based on SKU
+            self._draw_barcode(draw, sku, margin, barcode_y, barcode_width, barcode_height)
 
         # === SKU - at very bottom (italicized) ===
         draw.text((margin, height - padding_bottom - 12), sku, font=font_sku_italic, fill="black")
@@ -332,8 +407,18 @@ class PrinterService:
         price: float,
         set_name: str | None = None,
         variant: str | None = None,
+        barcode: str | None = None,
     ) -> tuple[bool, str]:
-        """Print a label. Returns (success, message)."""
+        """Print a label. Returns (success, message).
+        
+        Args:
+            sku: Product SKU
+            name: Card name
+            price: Card price
+            set_name: Set name
+            variant: Card variant
+            barcode: EAN-13 barcode from Odoo (13 digits)
+        """
         if not self.is_available:
             return False, "Printer not configured or disabled"
 
@@ -345,8 +430,8 @@ class PrinterService:
             from brother_ql.raster import BrotherQLRaster
             from brother_ql.backends.network import BrotherQLBackendNetwork
 
-            # Create label image
-            image = self.create_label_image(sku, name, price, set_name, variant)
+            # Create label image with EAN-13 barcode
+            image = self.create_label_image(sku, name, price, set_name, variant, barcode_ean13=barcode)
 
             # Initialize raster object
             qlr = BrotherQLRaster(self._settings.printer_model)
@@ -383,6 +468,68 @@ class PrinterService:
         except Exception as e:
             logger.error(f"Print failed: {e}")
             return False, f"Print failed: {str(e)}"
+
+
+    def print_labels_batch(
+        self,
+        products: list[dict],
+    ) -> tuple[int, int, list[str]]:
+        """Print labels for multiple products based on their stock quantity.
+        
+        Args:
+            products: List of product dicts with keys:
+                - sku (default_code)
+                - name
+                - price (list_price)
+                - set_name (x_set_name)
+                - barcode
+                - qty (quantity to print)
+        
+        Returns:
+            Tuple of (printed_count, failed_count, error_messages)
+        """
+        if not self.is_available:
+            return 0, len(products), ["Printer not configured or disabled"]
+
+        if not self.check_connection():
+            return 0, len(products), [f"Cannot connect to printer at {self._settings.printer_ip}:{self._settings.printer_port}"]
+
+        printed = 0
+        failed = 0
+        errors = []
+
+        for product in products:
+            sku = product.get("sku", "")
+            name = product.get("name", "")
+            price = product.get("price", 0.0)
+            set_name = product.get("set_name")
+            barcode_val = product.get("barcode")
+            qty = int(product.get("qty", 1))
+
+            # Determine variant from SKU
+            variant = None
+            if "-holo" in sku.lower():
+                variant = "Holofoil"
+            elif "-reverse" in sku.lower():
+                variant = "Reverse Holofoil"
+
+            # Print qty copies
+            for i in range(qty):
+                success, msg = self.print_label(
+                    sku=sku,
+                    name=name,
+                    price=price,
+                    set_name=set_name,
+                    variant=variant,
+                    barcode=barcode_val,
+                )
+                if success:
+                    printed += 1
+                else:
+                    failed += 1
+                    errors.append(f"{sku} (copy {i+1}): {msg}")
+
+        return printed, failed, errors
 
 
 # Singleton instance

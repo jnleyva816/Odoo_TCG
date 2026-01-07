@@ -202,6 +202,96 @@ def labels(skus, output, set_code):
 
 
 # =============================================================================
+# PRINT COMMAND
+# =============================================================================
+
+
+@main.group()
+def print_labels():
+    """Print labels for cards."""
+    pass
+
+
+@print_labels.command(name="stock")
+@click.option("--set", "set_code", help="Only print labels for a specific set")
+@click.option("--dry-run", is_flag=True, help="Show what would be printed without printing")
+@click.option("--limit", type=int, help="Limit total number of labels to print")
+def print_stock(set_code, dry_run, limit):
+    """
+    Print labels for all cards in stock.
+
+    Prints one label per unit in stock. If you have 3 copies of a card,
+    it will print 3 labels.
+
+    Examples:
+        tcg print-labels stock --dry-run          # Preview what will print
+        tcg print-labels stock                    # Print all labels
+        tcg print-labels stock --set sv09         # Only print for SV09 set
+        tcg print-labels stock --limit 50         # Print max 50 labels
+    """
+    from .commands.mass_print import mass_print_labels
+
+    result = mass_print_labels(set_code=set_code, dry_run=dry_run, limit=limit)
+
+    if "error" in result:
+        console.print(f"[red]Error: {result['error']}[/red]")
+        sys.exit(1)
+
+
+# =============================================================================
+# BARCODES COMMAND
+# =============================================================================
+
+
+@main.group()
+def barcodes():
+    """Manage product barcodes (EAN-13)."""
+    pass
+
+
+@barcodes.command(name="backfill")
+@click.option("--dry-run", is_flag=True, help="Show what would be done without making changes")
+@click.option("--set", "set_code", help="Only process products from a specific set")
+@click.option("--force", is_flag=True, help="Regenerate barcodes even for products that have them")
+def barcodes_backfill(dry_run, set_code, force):
+    """
+    Add EAN-13 barcodes to existing products that don't have them.
+
+    Examples:
+        tcg barcodes backfill
+        tcg barcodes backfill --set sv09
+        tcg barcodes backfill --dry-run
+        tcg barcodes backfill --force  # Regenerate all
+    """
+    from .commands.barcodes import backfill_barcodes
+
+    result = backfill_barcodes(dry_run=dry_run, set_code=set_code, force=force)
+
+    if "error" in result:
+        console.print(f"[red]Error: {result['error']}[/red]")
+        sys.exit(1)
+
+
+@barcodes.command(name="verify")
+@click.option("--set", "set_code", help="Only check products from a specific set")
+def barcodes_verify(set_code):
+    """
+    Verify barcode coverage and validity.
+
+    Examples:
+        tcg barcodes verify
+        tcg barcodes verify --set sv09
+    """
+    from .commands.barcodes import verify_barcodes
+
+    result = verify_barcodes(set_code=set_code)
+
+    if "error" in result:
+        console.print(f"[red]Error: {result['error']}[/red]")
+        sys.exit(1)
+
+
+# =============================================================================
 # STATUS COMMAND
 # =============================================================================
 
