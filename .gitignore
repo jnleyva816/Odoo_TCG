@@ -79,3 +79,7 @@ result-*
 
 # Logs
 *.log
+
+# Auth database
+auth.db
+*.db

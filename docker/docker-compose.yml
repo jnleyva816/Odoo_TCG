@@ -46,13 +46,26 @@ services:
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=8000
       - DEBUG=${DEBUG:-false}
-      # CORS_ORIGINS uses default from config.py (localhost:3000, localhost:5173)
+      # Authentication (REQUIRED)
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-1440}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # Email notifications (optional)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - ALERT_EMAIL=${ALERT_EMAIL:-}
       # Printer settings
       - PRINTER_ENABLED=${PRINTER_ENABLED:-false}
       - PRINTER_IP=${PRINTER_IP:-}
       - PRINTER_PORT=${PRINTER_PORT:-9100}
       - PRINTER_MODEL=${PRINTER_MODEL:-QL-800}
       - PRINTER_LABEL_SIZE=${PRINTER_LABEL_SIZE:-29x90}
+    volumes:
+      - auth-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -101,5 +114,6 @@ networks:
     name: tcg-network
 
 volumes:
-  # Future: Add volumes for persistent data if needed
+  # Persistent data volumes
+  auth-data:  # SQLite auth database
   tcg-data:

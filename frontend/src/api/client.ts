@@ -3,6 +3,37 @@
  */
 
 const API_BASE = '/api'
+const TOKEN_KEY = 'tcg_auth_token'
+
+// Get auth headers
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem(TOKEN_KEY)
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
+
+// Fetch with auth
+async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const headers = {
+    ...getAuthHeaders(),
+    ...options.headers,
+  }
+
+  const res = await fetch(url, { ...options, headers })
+
+  // If unauthorized, redirect to login
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY)
+    window.location.href = '/login'
+  }
+
+  return res
+}
 
 export interface Card {
   id: number
@@ -104,31 +135,37 @@ export interface StockAdjustmentResponse {
   change: number
 }
 
+// Export for use in auth context
+export const apiClient = {
+  getAuthHeaders,
+  authFetch,
+}
+
 // Search cards
 export async function searchCards(query: string, limit = 50): Promise<CardSearchResult> {
   const params = new URLSearchParams({ q: query, limit: String(limit) })
-  const res = await fetch(`${API_BASE}/cards/search?${params}`)
+  const res = await authFetch(`${API_BASE}/cards/search?${params}`)
   if (!res.ok) throw new Error('Search failed')
   return res.json()
 }
 
 // Get card by ID
 export async function getCard(cardId: number): Promise<CardDetail> {
-  const res = await fetch(`${API_BASE}/cards/${cardId}`)
+  const res = await authFetch(`${API_BASE}/cards/${cardId}`)
   if (!res.ok) throw new Error('Card not found')
   return res.json()
 }
 
 // Get card by SKU
 export async function getCardBySku(sku: string): Promise<CardDetail> {
-  const res = await fetch(`${API_BASE}/cards/sku/${encodeURIComponent(sku)}`)
+  const res = await authFetch(`${API_BASE}/cards/sku/${encodeURIComponent(sku)}`)
   if (!res.ok) throw new Error('Card not found')
   return res.json()
 }
 
 // Get all sets
 export async function getSets(): Promise<SetInfo[]> {
-  const res = await fetch(`${API_BASE}/cards/sets/`)
+  const res = await authFetch(`${API_BASE}/cards/sets/`)
   if (!res.ok) throw new Error('Failed to fetch sets')
   return res.json()
 }
@@ -152,16 +189,15 @@ export async function getInventory(params: {
   if (params.page) searchParams.set('page', String(params.page))
   if (params.page_size) searchParams.set('page_size', String(params.page_size))
 
-  const res = await fetch(`${API_BASE}/inventory/?${searchParams}`)
+  const res = await authFetch(`${API_BASE}/inventory/?${searchParams}`)
   if (!res.ok) throw new Error('Failed to fetch inventory')
   return res.json()
 }
 
 // Adjust stock
 export async function adjustStock(adjustment: StockAdjustment): Promise<StockAdjustmentResponse> {
-  const res = await fetch(`${API_BASE}/inventory/adjust`, {
+  const res = await authFetch(`${API_BASE}/inventory/adjust`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(adjustment),
   })
   if (!res.ok) throw new Error('Failed to adjust stock')
@@ -170,9 +206,8 @@ export async function adjustStock(adjustment: StockAdjustment): Promise<StockAdj
 
 // Generate label
 export async function generateLabel(productId: number, quantity = 1): Promise<LabelResponse> {
-  const res = await fetch(`${API_BASE}/labels/generate`, {
+  const res = await authFetch(`${API_BASE}/labels/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ product_id: productId, quantity }),
   })
   if (!res.ok) throw new Error('Failed to generate label')
@@ -181,38 +216,42 @@ export async function generateLabel(productId: number, quantity = 1): Promise<La
 
 // Preview label
 export async function previewLabel(productId: number): Promise<LabelResponse> {
-  const res = await fetch(`${API_BASE}/labels/preview/${productId}`)
+  const res = await authFetch(`${API_BASE}/labels/preview/${productId}`)
   if (!res.ok) throw new Error('Failed to preview label')
   return res.json()
 }
 
 // Get printer status
 export async function getPrinterStatus(): Promise<PrinterStatus> {
-  const res = await fetch(`${API_BASE}/labels/printer/status`)
+  const res = await authFetch(`${API_BASE}/labels/printer/status`)
   if (!res.ok) throw new Error('Failed to get printer status')
   return res.json()
 }
 
 // Print label directly to printer
 export async function printLabel(productId: number): Promise<PrintResponse> {
-  const res = await fetch(`${API_BASE}/labels/print/${productId}`, {
+  const res = await authFetch(`${API_BASE}/labels/print/${productId}`, {
     method: 'POST',
   })
   if (!res.ok) throw new Error('Failed to print label')
   return res.json()
 }
 
-// Get image URL
+// Get image URL (includes auth token as query param for <img> tags)
 export function getImageUrl(productId: number, size: 'image_128' | 'image_256' | 'image_512' | 'image_1920' = 'image_256'): string {
-  return `${API_BASE}/images/${productId}?size=${size}`
+  const token = localStorage.getItem(TOKEN_KEY)
+  const baseUrl = `${API_BASE}/images/${productId}?size=${size}`
+  return token ? `${baseUrl}&token=${token}` : baseUrl
 }
 
-// Get printer label preview URL (returns PNG image URL)
+// Get printer label preview URL
 export function getPrinterPreviewUrl(productId: number): string {
-  return `${API_BASE}/labels/printer/preview/${productId}`
+  const token = localStorage.getItem(TOKEN_KEY)
+  const baseUrl = `${API_BASE}/labels/printer/preview/${productId}`
+  return token ? `${baseUrl}?token=${token}` : baseUrl
 }
 
-// Health check
+// Health check (public endpoint)
 export async function healthCheck(): Promise<{ status: string; odoo_connected: boolean; version: string }> {
   const res = await fetch(`${API_BASE}/health`)
   if (!res.ok) throw new Error('Health check failed')
@@ -228,7 +267,7 @@ export async function getAvailableSets(params?: {
   if (params?.search) searchParams.set('search', params.search)
   if (params?.show_downloaded) searchParams.set('show_downloaded', 'true')
   
-  const res = await fetch(`${API_BASE}/sets/available?${searchParams}`)
+  const res = await authFetch(`${API_BASE}/sets/available?${searchParams}`)
   if (!res.ok) throw new Error('Failed to fetch sets')
   return res.json()
 }
@@ -238,9 +277,8 @@ export async function importSet(params: {
   set_code: string
   skip_images?: boolean
 }): Promise<{ success: boolean; message: string; set_code: string; status: string }> {
-  const res = await fetch(`${API_BASE}/sets/import`, {
+  const res = await authFetch(`${API_BASE}/sets/import`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   })
   if (!res.ok) throw new Error('Failed to start import')
@@ -249,8 +287,7 @@ export async function importSet(params: {
 
 // Get import status
 export async function getImportStatus(setCode: string): Promise<ImportStatus> {
-  const res = await fetch(`${API_BASE}/sets/status/${setCode}`)
+  const res = await authFetch(`${API_BASE}/sets/status/${setCode}`)
   if (!res.ok) throw new Error('Failed to get import status')
   return res.json()
 }
-

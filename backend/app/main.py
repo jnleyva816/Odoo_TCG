@@ -2,9 +2,11 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .auth.router import router as auth_router
+from .auth.service import get_auth_service
 from .config import get_settings
 from .routers import cards_router, images_router, inventory_router, labels_router, sets_router
 from .services import get_odoo_service
@@ -15,6 +17,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan - connect to Odoo on startup."""
     settings = get_settings()
     odoo = get_odoo_service()
+    auth = get_auth_service()
+
+    # Initialize auth (creates admin user if needed)
+    print("🔐 Initializing authentication...")
+    await auth.initialize()
 
     print(f"🔌 Connecting to Odoo at {settings.odoo_url}...")
     try:
@@ -52,12 +59,37 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include routers
-    app.include_router(cards_router, prefix="/api")
-    app.include_router(inventory_router, prefix="/api")
-    app.include_router(images_router, prefix="/api")
-    app.include_router(labels_router, prefix="/api")
-    app.include_router(sets_router, prefix="/api")
+    # Auth router (public)
+    app.include_router(auth_router, prefix="/api")
+
+    # Protected routers - require authentication
+    from .auth.dependencies import get_current_user
+
+    app.include_router(
+        cards_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
+    app.include_router(
+        inventory_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
+    app.include_router(
+        images_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
+    app.include_router(
+        labels_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
+    app.include_router(
+        sets_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
 
     @app.get("/api/health")
     async def health_check():

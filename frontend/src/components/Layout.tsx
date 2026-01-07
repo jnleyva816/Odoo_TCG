@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Sun, Moon, ScanLine, Package, Database } from 'lucide-react'
+import { Sun, Moon, ScanLine, Package, Database, LogOut, User } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 interface LayoutProps {
   children: ReactNode
@@ -10,6 +11,7 @@ interface LayoutProps {
 
 export default function Layout({ children, darkMode, onToggleDark }: LayoutProps) {
   const location = useLocation()
+  const { user, logout } = useAuth()
 
   const navItems = [
     { path: '/scanner', label: 'Scanner', icon: ScanLine },
@@ -56,14 +58,40 @@ export default function Layout({ children, darkMode, onToggleDark }: LayoutProps
             })}
           </nav>
 
-          {/* Theme toggle */}
-          <button
-            onClick={onToggleDark}
-            className="p-2 rounded-lg text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
-            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          {/* User menu */}
+          <div className="flex items-center gap-2">
+            {/* Current user */}
+            {user && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800/50 text-sm">
+                <User size={16} className="text-surface-400" />
+                <span className="text-surface-300">{user.username}</span>
+                {user.role === 'admin' && (
+                  <span className="px-1.5 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-400 rounded">
+                    Admin
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Theme toggle */}
+            <button
+              onClick={onToggleDark}
+              className="p-2 rounded-lg text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={logout}
+              className="p-2 rounded-lg text-surface-400 hover:text-red-400 hover:bg-surface-800 transition-colors"
+              aria-label="Logout"
+              title="Logout"
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -81,4 +109,3 @@ export default function Layout({ children, darkMode, onToggleDark }: LayoutProps
     </div>
   )
 }
-

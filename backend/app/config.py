@@ -44,6 +44,20 @@ class Settings(BaseSettings):
     printer_model: str = "QL-800"
     printer_label_size: str = "29"  # 29mm continuous (1.1")
 
+    # Authentication (REQUIRED - set in .env)
+    jwt_secret_key: str = ""  # Generate with: openssl rand -hex 32
+    jwt_expire_minutes: int = 1440  # 24 hours
+    admin_username: str = ""
+    admin_email: str = ""
+    admin_password: str = ""
+
+    # Email notifications (optional)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    alert_email: str = ""  # Email to receive security alerts
+
 
 @lru_cache
 def get_settings() -> Settings:
