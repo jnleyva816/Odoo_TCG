@@ -120,6 +120,7 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: false
+          load: true  # Load image to local Docker daemon for testing
           tags: tcg-automation:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -130,6 +131,7 @@ jobs:
           context: .
           file: docker/Dockerfile.backend
           push: false
+          load: true  # Load image to local Docker daemon for testing
           tags: tcg-backend:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
