@@ -7,12 +7,18 @@ LABEL description="FastAPI backend for Pokemon TCG Inventory Management"
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including fonts for label generation
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libffi-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    # Fonts for label printing
+    fonts-dejavu-core \
+    fonts-dejavu-extra \
+    fonts-liberation \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -f -v
 
 # Copy backend requirements first (for layer caching)
 COPY backend/pyproject.toml ./backend/
