@@ -28,7 +28,7 @@ import threading
 
 # Configuration
 PORT = 9000
-REPO_PATH = "/opt/Odoo_TCG"  # Where the repo is cloned
+REPO_PATH = "/var/lib/Odoo_TCG"  # Where the repo is cloned
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 BRANCH = "main"
 
