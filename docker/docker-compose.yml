@@ -45,7 +45,7 @@ services:
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=8000
       - DEBUG=${DEBUG:-false}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      # CORS_ORIGINS uses default from config.py (localhost:3000, localhost:5173)
       # Printer settings
       - PRINTER_ENABLED=${PRINTER_ENABLED:-false}
       - PRINTER_IP=${PRINTER_IP:-}
