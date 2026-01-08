@@ -112,19 +112,193 @@ docker compose up -d --build
 
 ## Odoo Configuration
 
-### Required Custom Fields
+This section covers setting up Odoo 16+ to work with TCG Inventory Management.
 
-Add these fields to `product.product` model in Odoo:
+### Installing Odoo
 
-| Field | Type | Label |
-|-------|------|-------|
-| `x_sku` | Char | TCGPlayer SKU |
-| `x_rarity` | Char | Rarity |
-| `x_set_name` | Char | Set Name |
+#### Option 1: Docker (Recommended for Testing)
 
-### Create Product Category
+```bash
+# Create docker-compose.yml for Odoo
+cat > odoo-docker-compose.yml << 'EOF'
+services:
+  odoo:
+    image: odoo:16
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo-data:/var/lib/odoo
+      - ./odoo-addons:/mnt/extra-addons
+    environment:
+      - HOST=db
+      - USER=odoo
+      - PASSWORD=odoo
 
-Create a product category called "Pokemon Cards" (or similar) for organizing imported cards.
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_USER=odoo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  odoo-data:
+  postgres-data:
+EOF
+
+# Start Odoo
+docker compose -f odoo-docker-compose.yml up -d
+```
+
+Access Odoo at http://localhost:8069
+
+#### Option 2: Native Installation
+
+Follow the [official Odoo installation guide](https://www.odoo.com/documentation/16.0/administration/install.html).
+
+### Initial Odoo Setup
+
+1. **Create Database**
+   - Navigate to http://localhost:8069
+   - Fill in the database creation form:
+     - **Database Name**: `TCG-Cards` (or your preference)
+     - **Email**: Your admin email
+     - **Password**: Your admin password
+     - **Language**: English
+     - **Country**: Your country
+   - Click "Create Database"
+
+2. **Install Required Apps**
+   - Go to Apps menu
+   - Search and install:
+     - **Inventory** (stock management)
+     - **Sales** (for pricing)
+     - **Purchase** (optional, for cost tracking)
+
+### Creating Custom Fields
+
+TCG Inventory requires custom fields on products to store card-specific data.
+
+#### Step 1: Enable Developer Mode
+
+1. Go to **Settings** → **General Settings**
+2. Scroll to the bottom
+3. Click **Activate the developer mode**
+
+#### Step 2: Add Custom Fields
+
+1. Go to **Settings** → **Technical** → **Models**
+2. Search for `product.product`
+3. Click on it to open
+4. Go to the **Fields** tab
+5. Click **Add a line** for each field:
+
+| Field Name | Field Label | Field Type | Notes |
+|------------|-------------|------------|-------|
+| `x_sku` | TCGPlayer SKU | Char | Store original TCGPlayer SKU |
+| `x_rarity` | Rarity | Char | Card rarity (Common, Rare, etc.) |
+| `x_set_name` | Set Name | Char | Pokemon set name |
+| `x_tcgplayer_id` | TCGPlayer ID | Integer | Optional: TCGPlayer product ID |
+
+#### Alternative: Using Odoo Studio (Enterprise)
+
+If you have Odoo Enterprise with Studio:
+
+1. Go to **Inventory** → **Products**
+2. Open any product
+3. Click the **Studio** icon (paintbrush)
+4. Drag **Text** fields onto the form
+5. Configure each field with the names above
+6. Click **Close**
+
+### Product Category Setup
+
+1. Go to **Inventory** → **Configuration** → **Product Categories**
+2. Click **Create**
+3. Fill in:
+   - **Name**: `Pokemon Cards`
+   - **Parent Category**: `All` (or your preference)
+   - **Costing Method**: `Standard Price`
+   - **Inventory Valuation**: `Manual` (or `Automated` if tracking costs)
+4. Click **Save**
+
+### Configure Product Defaults
+
+To make importing easier, set up default values:
+
+1. Go to **Inventory** → **Configuration** → **Settings**
+2. Under **Products**:
+   - Enable **Variants** if you want to track holofoil/reverse variants
+   - Set default **Unit of Measure** to `Units`
+
+### API Access Setup
+
+The TCG application connects via XML-RPC. Ensure your Odoo user has proper permissions:
+
+1. Go to **Settings** → **Users & Companies** → **Users**
+2. Click on your user
+3. Under **Access Rights**, ensure you have:
+   - **Inventory**: `Administrator` or `User`
+   - **Sales**: `User` or higher
+4. Note your **Login** (email) for the `.env` file
+
+### Testing the Connection
+
+After configuring Odoo:
+
+```bash
+# Test connection with CLI
+tcg status
+```
+
+Expected output:
+```
+✅ Connected to Odoo at http://localhost:8069
+   Database: TCG-Cards
+   User: admin@example.com
+   Products: 0
+```
+
+### Odoo Configuration Reference
+
+Your `.env` file should have:
+
+```env
+# Odoo Connection
+ODOO_URL=http://localhost:8069      # Your Odoo server URL
+ODOO_DB=TCG-Cards                   # Database name you created
+ODOO_USER=admin@example.com         # Your Odoo login email
+ODOO_PASSWORD=your-password         # Your Odoo password
+```
+
+### Troubleshooting Odoo
+
+#### "Invalid database" error
+
+- Verify `ODOO_DB` matches exactly (case-sensitive)
+- Check database exists: Odoo login page shows available databases
+
+#### "Access Denied" error
+
+- Verify email and password are correct
+- Check user has Inventory permissions
+- Ensure API access is not blocked by firewall
+
+#### Custom fields not found
+
+- Verify fields are created on `product.product` (not `product.template`)
+- Field names must start with `x_` prefix
+- Restart Odoo after adding fields: `docker compose restart odoo`
+
+#### Products not showing
+
+- Ensure products are marked as **Storable Product** (not Service)
+- Check product is **Active** (not archived)
+- Verify user has access to the product's company
 
 ## Label Printer Setup
 
