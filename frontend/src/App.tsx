@@ -7,6 +7,7 @@ import SetsPage from './pages/SetsPage'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FeaturesProvider, useFeatures } from './contexts/FeaturesContext'
+import { InstallPrompt } from './components/InstallPrompt'
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -116,6 +117,7 @@ function App() {
       <FeaturesProvider>
         <AuthProvider>
           <AppRoutes />
+          <InstallPrompt />
         </AuthProvider>
       </FeaturesProvider>
     </BrowserRouter>

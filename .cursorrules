@@ -1,0 +1,258 @@
+# Odoo TCG Inventory Management - Cursor Rules
+
+## Project Overview
+This is a Pokemon TCG card inventory management system with:
+- **Backend**: FastAPI + Python (in `/backend`)
+- **Frontend**: React + TypeScript + Vite (in `/frontend`)
+- **Database**: Odoo ERP (external) + Meilisearch (search) + Redis (cache)
+- **Deployment**: Docker Compose with auto-deploy webhook
+
+---
+
+## 🔴 CRITICAL: Pre-Commit Checklist
+**ALWAYS run these before committing or pushing:**
+
+```bash
+# Backend
+cd backend
+source .venv/bin/activate  # or use full path
+ruff check app/
+ruff format app/
+pytest ../tests/ -v --tb=short
+
+# Frontend
+cd frontend
+npm run lint
+npm run build
+```
+
+**Do NOT commit if any check fails.** Fix issues first.
+
+---
+
+## 📚 Documentation First
+
+1. **Before implementing any feature**, check for existing documentation in:
+   - `/docs/` - Architecture, deployment, setup guides
+   - `/README.md` - Project overview
+   - Code comments and docstrings
+
+2. **If documentation doesn't exist** for a feature or component:
+   - ASK: "Should I create documentation for [feature] before implementing?"
+   - Document the design decision BEFORE coding
+
+3. **After implementing**, update relevant docs if behavior changed.
+
+---
+
+## 🌿 Git Workflow (MANDATORY)
+
+### Branch Naming Convention
+```
+feature/<short-description>   # New features
+fix/<issue-description>       # Bug fixes
+refactor/<component-name>     # Code improvements
+docs/<topic>                  # Documentation only
+```
+
+**Examples:**
+- `feature/batch-label-printing`
+- `fix/auth-redirect-on-hmr`
+- `refactor/search-service`
+
+### Commit Message Format
+```
+<type>: <short description>
+
+<optional body explaining what and why>
+
+<optional footer with breaking changes or issue refs>
+```
+
+**Types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
+
+### Before Creating a PR
+1. Ensure all tests pass
+2. Ensure linting passes
+3. Update documentation if needed
+4. Create tests for new functionality
+
+---
+
+## 🧪 Testing Requirements
+
+### New Features MUST Include Tests
+- Unit tests for business logic
+- Integration tests for API endpoints
+- Tests go in `/tests/` directory
+
+### Test File Naming
+```
+test_<module>.py      # e.g., test_auth.py, test_search.py
+```
+
+### Running Tests
+```bash
+cd backend
+.venv/bin/python -m pytest ../tests/ -v --tb=short
+```
+
+---
+
+## 🎯 Decision Framework
+
+### Challenge My Thinking When:
+1. **Over-engineering**: "Do we really need [complex solution] for this? A simpler approach might be..."
+2. **Missing edge cases**: "What happens if [edge case]? Should we handle that?"
+3. **Data integrity risks**: "This change could affect existing data. Let's discuss migration strategy."
+4. **Performance concerns**: "This approach might be slow with large datasets. Consider..."
+5. **Security issues**: "This exposes [sensitive data]. We should add [protection]."
+
+### Always Ask Before:
+- Deleting or modifying existing data structures
+- Changing authentication/authorization logic
+- Modifying production configuration
+- Adding new external dependencies
+
+---
+
+## ⚡ Performance & Optimization Priorities
+
+### Priority Order
+1. **Data Integrity** - Never lose or corrupt user data
+2. **Speed** - Fast response times, instant search
+3. **Efficiency** - Minimize API calls, batch operations
+4. **Storage** - Minimize data footprint, use efficient formats
+
+### Optimization Guidelines
+- Use Meilisearch for search (not direct Odoo queries for large datasets)
+- Use Redis for caching frequently accessed data
+- Batch Odoo operations when possible (bulk reads/writes)
+- Lazy load images and large datasets
+- Use pagination for all list endpoints
+
+### Database Queries
+- Always use indexes on frequently queried fields
+- Limit results with pagination (default: 50, max: 100)
+- Use `select_related` / field limiting to avoid N+1 queries
+
+---
+
+## 🏗️ Architecture Rules
+
+### Backend (FastAPI)
+- All endpoints in `/backend/app/routers/`
+- Business logic in `/backend/app/services/`
+- Models/schemas in `/backend/app/models/`
+- Auth logic in `/backend/app/auth/`
+- Use dependency injection via `Depends()`
+- All async where possible
+
+### Frontend (React)
+- Components in `/frontend/src/components/`
+- Pages in `/frontend/src/pages/`
+- API client in `/frontend/src/api/client.ts`
+- Context providers in `/frontend/src/contexts/`
+- Use React Query for data fetching
+- Use Tailwind CSS for styling
+
+### API Design
+- RESTful conventions
+- Always return proper HTTP status codes
+- Include pagination metadata in list responses
+- Use consistent error response format
+
+---
+
+## 🔒 Security Rules
+
+1. **Never commit secrets** - Use environment variables
+2. **Validate all inputs** - Use Pydantic models
+3. **Authentication required** - All endpoints except `/health` and `/login`
+4. **Sanitize user data** - Before storing or displaying
+
+---
+
+## 📋 PR Template
+
+When creating a PR, use this format:
+
+```markdown
+## Description
+Brief description of what this PR does.
+
+## Type of Change
+- [ ] New feature
+- [ ] Bug fix
+- [ ] Refactor
+- [ ] Documentation
+- [ ] Performance improvement
+
+## Changes Made
+- Change 1
+- Change 2
+
+## Testing
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] Manual testing completed
+
+## Checklist
+- [ ] `ruff check` passes
+- [ ] `ruff format --check` passes
+- [ ] `pytest` passes (all tests)
+- [ ] `npm run lint` passes
+- [ ] `npm run build` passes
+- [ ] Documentation updated (if needed)
+
+## Screenshots (if UI changes)
+<!-- Add screenshots here -->
+
+## Breaking Changes
+<!-- List any breaking changes and migration steps -->
+```
+
+---
+
+## 🚀 Deployment
+
+### Production Deploy (Auto)
+Push to `main` branch triggers:
+1. GitHub Actions CI (tests + lint)
+2. Docker image build + push
+3. Webhook triggers server pull + restart
+
+### After Deploy Checklist
+- [ ] Verify health endpoint responds
+- [ ] Check logs for errors
+- [ ] Test critical user flows
+- [ ] Run Meilisearch sync if cards changed
+
+---
+
+## 📁 Key File Locations
+
+| Purpose | Location |
+|---------|----------|
+| Backend entry | `backend/app/main.py` |
+| API routes | `backend/app/routers/` |
+| Odoo service | `backend/app/services/odoo.py` |
+| Search service | `backend/app/services/search.py` |
+| Auth (Odoo) | `backend/app/auth/odoo_auth.py` |
+| Frontend entry | `frontend/src/main.tsx` |
+| API client | `frontend/src/api/client.ts` |
+| Auth context | `frontend/src/contexts/AuthContext.tsx` |
+| Docker config | `docker/docker-compose.yml` |
+| CI/CD | `.github/workflows/ci.yml` |
+| Tests | `tests/` |
+
+---
+
+## ❓ When In Doubt
+
+1. Check existing code patterns first
+2. Ask clarifying questions before implementing
+3. Propose multiple solutions with trade-offs
+4. Start simple, optimize later (but plan for scale)
+5. Document decisions for future reference
+
