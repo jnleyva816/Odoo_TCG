@@ -46,7 +46,7 @@ jobs:
         continue-on-error: true  # Don't fail on type errors for now
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: pip install rich -q && pytest ../tests/ -v --tb=short
         env:
           ODOO_URL: http://localhost:8069
           ODOO_DB: test

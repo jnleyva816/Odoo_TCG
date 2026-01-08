@@ -4,8 +4,6 @@ This provides instant, typo-tolerant search for cards,
 significantly faster than querying Odoo directly.
 """
 
-import asyncio
-from functools import lru_cache
 from typing import Any
 
 import httpx
@@ -60,7 +58,7 @@ class SearchService:
             client = await self._get_client()
 
             # Create or update index
-            response = await client.post(
+            await client.post(
                 "/indexes",
                 json={"uid": self.INDEX_NAME, "primaryKey": "id"},
             )

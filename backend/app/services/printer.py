@@ -11,12 +11,12 @@ from urllib.parse import quote_plus
 warnings.filterwarnings("ignore", message=".*brother_ql.devicedependent.*")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="brother_ql")
 
-import barcode
-import qrcode
-from barcode.writer import ImageWriter
-from PIL import Image, ImageDraw, ImageFont
+import barcode  # noqa: E402
+import qrcode  # noqa: E402
+from barcode.writer import ImageWriter  # noqa: E402
+from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
-from ..config import get_settings
+from ..config import get_settings  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

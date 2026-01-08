@@ -279,9 +279,15 @@ class OdooService:
 
                     # Filter product IDs based on stock filter
                     if stock_filter == "in_stock":
-                        filtered_ids = [pid for pid in all_product_ids if product_qty.get(pid, 0) > 0]
+                        filtered_ids = [
+                            pid for pid in all_product_ids
+                            if product_qty.get(pid, 0) > 0
+                        ]
                     else:  # out_of_stock
-                        filtered_ids = [pid for pid in all_product_ids if product_qty.get(pid, 0) <= 0]
+                        filtered_ids = [
+                            pid for pid in all_product_ids
+                            if product_qty.get(pid, 0) <= 0
+                        ]
 
                     total = len(filtered_ids)
                     offset = (page - 1) * page_size

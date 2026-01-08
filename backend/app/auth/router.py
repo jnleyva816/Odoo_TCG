@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
+from ..services import OdooService, get_odoo_service
 from .dependencies import get_current_user, require_admin
 from .models import Token, User, UserLogin, UserRole
 from .odoo_auth import OdooAuthService, get_odoo_auth_service
-from ..services import OdooService, get_odoo_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

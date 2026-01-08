@@ -1,5 +1,6 @@
 """Authentication service."""
 
+import json
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -9,6 +10,7 @@ from passlib.context import CryptContext
 from ..config import get_settings
 from .database import (
     create_user,
+    get_all_users,
     get_failed_attempts,
     get_user_by_id,
     get_user_by_username,
@@ -17,12 +19,8 @@ from .database import (
     log_login_attempt,
     update_last_login,
     update_user_warehouse,
-    update_user_warehouse_ids,
-    get_all_users,
 )
 from .models import Token, TokenData, User, UserRole
-
-import json
 
 
 def _parse_warehouse_ids(warehouse_ids_str: str | None) -> list[int] | None:

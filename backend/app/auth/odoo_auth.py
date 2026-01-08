@@ -13,7 +13,7 @@ from typing import Any
 from jose import JWTError, jwt
 
 from ..config import get_settings
-from .models import Token, TokenData, User, UserRole
+from .models import Token, User, UserRole
 
 
 class OdooAuthService:
@@ -56,7 +56,7 @@ class OdooAuthService:
                 f"{self.odoo_url}/xmlrpc/2/object",
                 allow_none=True,
             )
-            
+
             # Fetch user with warehouse and group info
             users = models.execute_kw(
                 self.odoo_db,
@@ -109,7 +109,7 @@ class OdooAuthService:
                 f"{self.odoo_url}/xmlrpc/2/object",
                 allow_none=True,
             )
-            
+
             # Check if user has stock.group_stock_manager group
             # This is the "Inventory > Administrator" group in Odoo
             groups = models.execute_kw(
@@ -121,13 +121,13 @@ class OdooAuthService:
                 [[("users", "in", [uid]), ("category_id.name", "=", "Inventory")]],
                 {"fields": ["name", "full_name"]},
             )
-            
+
             # Check for admin-level groups
             admin_group_names = ["Administrator", "Manager"]
             for group in groups:
                 if any(admin in group.get("name", "") for admin in admin_group_names):
                     return True
-            
+
             # Also check for base admin
             admin_groups = models.execute_kw(
                 self.odoo_db,
@@ -139,7 +139,7 @@ class OdooAuthService:
                 {"fields": ["name"]},
             )
             return len(admin_groups) > 0
-            
+
         except Exception as e:
             print(f"⚠️ Error checking admin status: {e}")
             return False
@@ -151,12 +151,12 @@ class OdooAuthService:
     ) -> tuple[User, str] | None:
         """
         Authenticate a user against Odoo.
-        
+
         Returns tuple of (User, odoo_password) if successful, None otherwise.
         We need to store the password temporarily for subsequent Odoo calls.
         """
         loop = asyncio.get_event_loop()
-        
+
         # Authenticate against Odoo
         uid = await loop.run_in_executor(
             self._executor,
@@ -164,7 +164,7 @@ class OdooAuthService:
             username,
             password,
         )
-        
+
         if not uid:
             return None
 
@@ -175,7 +175,7 @@ class OdooAuthService:
             uid,
             password,
         )
-        
+
         if not user_info or not user_info.get("active"):
             return None
 
@@ -190,11 +190,11 @@ class OdooAuthService:
         # Get warehouse info
         warehouse_id = None
         warehouse_ids = None
-        
+
         if user_info.get("property_warehouse_id"):
             warehouse_id = user_info["property_warehouse_id"][0]
             warehouse_ids = [warehouse_id]
-        
+
         # If admin, get all warehouses
         if is_admin:
             all_warehouses = await loop.run_in_executor(
@@ -219,7 +219,7 @@ class OdooAuthService:
             created_at=datetime.utcnow(),  # Odoo doesn't expose this easily
             last_login=datetime.utcnow(),
         )
-        
+
         return user, password
 
     def create_access_token(
@@ -232,7 +232,7 @@ class OdooAuthService:
         expire = datetime.utcnow() + (
             expires_delta or timedelta(minutes=self.access_token_expire_minutes)
         )
-        
+
         to_encode = {
             "sub": user.username,
             "user_id": user.id,
@@ -242,7 +242,7 @@ class OdooAuthService:
             "odoo_pwd": odoo_password,  # Stored in JWT for Odoo API calls
             "exp": expire,
         }
-        
+
         return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
 
     def decode_token(self, token: str) -> dict[str, Any] | None:
@@ -264,7 +264,7 @@ class OdooAuthService:
         role = payload.get("role", "user")
         warehouse_id = payload.get("warehouse_id")
         warehouse_ids = payload.get("warehouse_ids")
-        
+
         if not user_id or not username:
             return None
 
@@ -294,20 +294,20 @@ class OdooAuthService:
     ) -> tuple[Token, User] | None:
         """Login and return JWT token + user info."""
         result = await self.authenticate_user(username, password)
-        
+
         if not result:
             return None
-        
+
         user, odoo_password = result
-        
+
         access_token = self.create_access_token(user, odoo_password)
-        
+
         token = Token(
             access_token=access_token,
             token_type="bearer",
             expires_in=self.access_token_expire_minutes * 60,
         )
-        
+
         return token, user
 
     async def switch_warehouse(self, token: str, warehouse_id: int) -> User | None:
@@ -315,11 +315,11 @@ class OdooAuthService:
         user = await self.get_current_user(token)
         if not user:
             return None
-        
+
         # Verify user has access to this warehouse
         if user.warehouse_ids and warehouse_id not in user.warehouse_ids:
             return None
-        
+
         # Return updated user (the actual switch is handled by updating the token)
         return User(
             id=user.id,

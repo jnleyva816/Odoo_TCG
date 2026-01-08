@@ -152,7 +152,8 @@ async def get_all_users() -> list[dict[str, Any]]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
-            "SELECT id, username, email, role, is_active, warehouse_id, warehouse_ids, created_at, last_login FROM users ORDER BY username"
+            """SELECT id, username, email, role, is_active, warehouse_id,
+            warehouse_ids, created_at, last_login FROM users ORDER BY username"""
         )
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]

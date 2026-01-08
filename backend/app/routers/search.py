@@ -7,13 +7,11 @@ Falls back to Odoo search if Meilisearch is unavailable.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 
 from ..auth.dependencies import get_current_user
 from ..auth.models import User
-from ..services import SearchService, get_search_service, OdooService, get_odoo_service
-from ..models.inventory import SortField, SortOrder
-from pydantic import BaseModel
-
+from ..services import OdooService, SearchService, get_odoo_service, get_search_service
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -56,12 +54,12 @@ async def search_cards(
 ) -> SearchResponse:
     """
     Search cards with instant results.
-    
+
     Uses Meilisearch for fast, typo-tolerant search.
     Falls back to Odoo if Meilisearch is unavailable.
     """
     warehouse_id = current_user.warehouse_id
-    
+
     # Try Meilisearch first (only if it has data)
     if await search_service.health_check():
         # Check if Meilisearch has any indexed documents
@@ -77,7 +75,7 @@ async def search_cards(
                 page=page,
                 page_size=page_size,
             )
-            
+
             return SearchResponse(
                 query=q,
                 results=[
@@ -99,7 +97,7 @@ async def search_cards(
                 source="meilisearch",
             )
         # Meilisearch has no data, fall through to Odoo
-    
+
     # Fallback to Odoo search
     records, total = await odoo_service.get_inventory(
         search=q if q else None,
@@ -111,7 +109,7 @@ async def search_cards(
         page_size=page_size,
         warehouse_id=warehouse_id,
     )
-    
+
     return SearchResponse(
         query=q,
         results=[
@@ -142,7 +140,7 @@ async def get_search_stats(
     """Get search index statistics."""
     healthy = await search_service.health_check()
     stats = await search_service.get_stats() if healthy else {}
-    
+
     return {
         "healthy": healthy,
         "index": search_service.INDEX_NAME,
@@ -158,28 +156,28 @@ async def trigger_sync(
 ):
     """
     Sync all cards from Odoo to Meilisearch.
-    
+
     This runs directly (not via Celery) and indexes all cards.
     """
     # Initialize Meilisearch index
     await search_service.initialize()
-    
+
     # Fetch all cards from Odoo and index them
     page = 1
     page_size = 500
     total_indexed = 0
     warehouse_id = current_user.warehouse_id
-    
+
     while True:
         records, total = await odoo_service.get_inventory(
             page=page,
             page_size=page_size,
             warehouse_id=warehouse_id,
         )
-        
+
         if not records:
             break
-        
+
         # Transform for Meilisearch
         cards = []
         for r in records:
@@ -194,15 +192,15 @@ async def trigger_sync(
                 "has_stock": int(r.get("qty_available") or 0) > 0,
                 "warehouse_id": warehouse_id,
             })
-        
+
         # Index batch
         await search_service.index_cards(cards)
         total_indexed += len(cards)
-        
+
         if page * page_size >= total:
             break
         page += 1
-    
+
     return {
         "status": "complete",
         "indexed": total_indexed,

@@ -5,10 +5,17 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .auth.router import router as auth_router
 from .auth.odoo_auth import get_odoo_auth_service
+from .auth.router import router as auth_router
 from .config import get_settings
-from .routers import cards_router, images_router, inventory_router, labels_router, sets_router, search_router
+from .routers import (
+    cards_router,
+    images_router,
+    inventory_router,
+    labels_router,
+    search_router,
+    sets_router,
+)
 from .services import get_odoo_service
 
 
