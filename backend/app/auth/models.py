@@ -88,4 +88,3 @@ class LoginAttempt(BaseModel):
     user_agent: str
     success: bool
     timestamp: datetime
-

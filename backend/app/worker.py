@@ -31,15 +31,12 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-
     # Task execution settings
     task_acks_late=True,  # Acknowledge after completion (for reliability)
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,  # One task at a time per worker
-
     # Result backend settings
     result_expires=3600,  # Results expire after 1 hour
-
     # Beat schedule (for periodic tasks)
     beat_schedule={
         "sync-cards-to-search": {
@@ -51,4 +48,3 @@ celery_app.conf.update(
 
 # For backwards compatibility
 app = celery_app
-

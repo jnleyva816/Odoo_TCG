@@ -256,9 +256,7 @@ class OdooService:
 
                 # For stock filtering, we need to query stock.quant
                 # Get all product IDs in the domain first
-                all_product_ids = await self._execute(
-                    "product.product", "search", domain
-                )
+                all_product_ids = await self._execute("product.product", "search", domain)
 
                 if stock_filter in ["in_stock", "out_of_stock"]:
                     # Get quantities from stock.quant for this location
@@ -280,13 +278,11 @@ class OdooService:
                     # Filter product IDs based on stock filter
                     if stock_filter == "in_stock":
                         filtered_ids = [
-                            pid for pid in all_product_ids
-                            if product_qty.get(pid, 0) > 0
+                            pid for pid in all_product_ids if product_qty.get(pid, 0) > 0
                         ]
                     else:  # out_of_stock
                         filtered_ids = [
-                            pid for pid in all_product_ids
-                            if product_qty.get(pid, 0) <= 0
+                            pid for pid in all_product_ids if product_qty.get(pid, 0) <= 0
                         ]
 
                     total = len(filtered_ids)

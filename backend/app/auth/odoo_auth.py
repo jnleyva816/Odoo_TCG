@@ -69,7 +69,7 @@ class OdooAuthService:
                     "fields": [
                         "id",
                         "login",  # username/email
-                        "name",   # display name
+                        "name",  # display name
                         "email",
                         "active",
                         "property_warehouse_id",  # User's default warehouse
@@ -344,4 +344,3 @@ def get_odoo_auth_service() -> OdooAuthService:
     if _odoo_auth_service is None:
         _odoo_auth_service = OdooAuthService()
     return _odoo_auth_service
-

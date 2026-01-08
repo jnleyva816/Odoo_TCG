@@ -106,9 +106,7 @@ async def get_warehouses(
 
     # If admin with warehouse_ids, filter to allowed warehouses
     if current_user.role == UserRole.ADMIN and current_user.warehouse_ids:
-        warehouses = [
-            w for w in all_warehouses if w["id"] in current_user.warehouse_ids
-        ]
+        warehouses = [w for w in all_warehouses if w["id"] in current_user.warehouse_ids]
     elif current_user.warehouse_id:
         # Regular user - only their warehouse
         warehouses = [w for w in all_warehouses if w["id"] == current_user.warehouse_id]
@@ -116,10 +114,7 @@ async def get_warehouses(
         # Fallback - show all (for backwards compatibility)
         warehouses = all_warehouses
 
-    return [
-        WarehouseInfo(id=w["id"], name=w["name"], code=w.get("code", ""))
-        for w in warehouses
-    ]
+    return [WarehouseInfo(id=w["id"], name=w["name"], code=w.get("code", "")) for w in warehouses]
 
 
 @router.post("/switch-warehouse", response_model=SwitchWarehouseResponse)

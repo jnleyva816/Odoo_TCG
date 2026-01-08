@@ -256,4 +256,3 @@ def get_search_service() -> SearchService:
     if _search_service is None:
         _search_service = SearchService(get_settings())
     return _search_service
-

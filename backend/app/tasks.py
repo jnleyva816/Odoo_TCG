@@ -29,6 +29,7 @@ def sync_all_cards_to_search(self, warehouse_id: int | None = None):
     This task fetches all products from Odoo and indexes them
     in Meilisearch for fast searching.
     """
+
     async def _sync():
         settings = get_settings()
         odoo = OdooService(settings)
@@ -55,17 +56,19 @@ def sync_all_cards_to_search(self, warehouse_id: int | None = None):
             # Transform for Meilisearch
             cards = []
             for r in records:
-                cards.append({
-                    "id": r["id"],
-                    "sku": r.get("default_code") or "",
-                    "name": r.get("name") or "",
-                    "set_id": r["categ_id"][0] if r.get("categ_id") else None,
-                    "set_name": r["categ_id"][1] if r.get("categ_id") else None,
-                    "price": float(r.get("list_price") or 0),
-                    "quantity": int(r.get("qty_available") or 0),
-                    "has_stock": int(r.get("qty_available") or 0) > 0,
-                    "warehouse_id": warehouse_id,
-                })
+                cards.append(
+                    {
+                        "id": r["id"],
+                        "sku": r.get("default_code") or "",
+                        "name": r.get("name") or "",
+                        "set_id": r["categ_id"][0] if r.get("categ_id") else None,
+                        "set_name": r["categ_id"][1] if r.get("categ_id") else None,
+                        "price": float(r.get("list_price") or 0),
+                        "quantity": int(r.get("qty_available") or 0),
+                        "has_stock": int(r.get("qty_available") or 0) > 0,
+                        "warehouse_id": warehouse_id,
+                    }
+                )
 
             # Index batch
             await search.index_cards(cards)
@@ -90,6 +93,7 @@ def sync_all_cards_to_search(self, warehouse_id: int | None = None):
 @celery_app.task(bind=True, max_retries=3)
 def sync_card_to_search(self, card_id: int, warehouse_id: int | None = None):
     """Sync a single card to Meilisearch (for real-time updates)."""
+
     async def _sync():
         settings = get_settings()
         odoo = OdooService(settings)
@@ -159,4 +163,3 @@ def sync_prices_task(self):
     """
     # TODO: Implement price sync logic
     return {"status": "not_implemented"}
-

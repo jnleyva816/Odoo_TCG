@@ -18,6 +18,7 @@ router = APIRouter(prefix="/search", tags=["Search"])
 
 class SearchResult(BaseModel):
     """Search result item."""
+
     id: int
     sku: str
     name: str
@@ -30,6 +31,7 @@ class SearchResult(BaseModel):
 
 class SearchResponse(BaseModel):
     """Search response."""
+
     query: str
     results: list[SearchResult]
     total: int
@@ -181,17 +183,19 @@ async def trigger_sync(
         # Transform for Meilisearch
         cards = []
         for r in records:
-            cards.append({
-                "id": r["id"],
-                "sku": r.get("default_code") or "",
-                "name": r.get("name") or "",
-                "set_id": r["categ_id"][0] if r.get("categ_id") else None,
-                "set_name": r["categ_id"][1] if r.get("categ_id") else None,
-                "price": float(r.get("list_price") or 0),
-                "quantity": int(r.get("qty_available") or 0),
-                "has_stock": int(r.get("qty_available") or 0) > 0,
-                "warehouse_id": warehouse_id,
-            })
+            cards.append(
+                {
+                    "id": r["id"],
+                    "sku": r.get("default_code") or "",
+                    "name": r.get("name") or "",
+                    "set_id": r["categ_id"][0] if r.get("categ_id") else None,
+                    "set_name": r["categ_id"][1] if r.get("categ_id") else None,
+                    "price": float(r.get("list_price") or 0),
+                    "quantity": int(r.get("qty_available") or 0),
+                    "has_stock": int(r.get("qty_available") or 0) > 0,
+                    "warehouse_id": warehouse_id,
+                }
+            )
 
         # Index batch
         await search_service.index_cards(cards)
@@ -207,4 +211,3 @@ async def trigger_sync(
         "warehouse_id": warehouse_id,
         "message": f"Successfully indexed {total_indexed} cards to Meilisearch",
     }
-
