@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     feature_inventory_page: bool = True  # Inventory management page
     feature_label_printing: bool = True  # Label printing functionality
 
+    # Redis (for caching and Celery broker)
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Meilisearch (for fast full-text search)
+    meili_url: str = "http://localhost:7700"
+    meili_master_key: str = ""  # Set in production!
+
 
 @lru_cache
 def get_settings() -> Settings:

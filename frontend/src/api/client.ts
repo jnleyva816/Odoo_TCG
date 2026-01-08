@@ -17,7 +17,20 @@ function getAuthHeaders(): HeadersInit {
   return headers
 }
 
-// Fetch with auth
+// Custom event for auth failure - AuthContext listens for this
+const AUTH_FAILURE_EVENT = 'tcg:auth-failure'
+
+export function dispatchAuthFailure() {
+  window.dispatchEvent(new CustomEvent(AUTH_FAILURE_EVENT))
+}
+
+export function onAuthFailure(callback: () => void) {
+  window.addEventListener(AUTH_FAILURE_EVENT, callback)
+  return () => window.removeEventListener(AUTH_FAILURE_EVENT, callback)
+}
+
+// Fetch with auth - dispatches event on 401 instead of hard redirect
+// This allows React components to handle auth state gracefully
 async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = {
     ...getAuthHeaders(),
@@ -26,10 +39,10 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
 
   const res = await fetch(url, { ...options, headers })
 
-  // If unauthorized, redirect to login
+  // On 401, dispatch event and clear token - let AuthContext handle redirect
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_KEY)
-    window.location.href = '/login'
+    dispatchAuthFailure()
   }
 
   return res
@@ -122,6 +135,12 @@ export interface ImportStatus {
   errors: number
 }
 
+export interface Warehouse {
+  id: number
+  name: string
+  code: string
+}
+
 export interface StockAdjustment {
   product_id: number
   quantity_change: number
@@ -141,10 +160,59 @@ export const apiClient = {
   authFetch,
 }
 
-// Search cards
+// Search cards (uses Meilisearch for instant results)
 export async function searchCards(query: string, limit = 50): Promise<CardSearchResult> {
-  const params = new URLSearchParams({ q: query, limit: String(limit) })
-  const res = await authFetch(`${API_BASE}/cards/search?${params}`)
+  const params = new URLSearchParams({ q: query, page_size: String(limit) })
+  // Use trailing slash to avoid 307 redirect which loses auth headers
+  const res = await authFetch(`${API_BASE}/search/?${params}`)
+  if (!res.ok) {
+    // Fallback to old endpoint if new search fails
+    const fallbackParams = new URLSearchParams({ q: query, limit: String(limit) })
+    const fallbackRes = await authFetch(`${API_BASE}/cards/search?${fallbackParams}`)
+    if (!fallbackRes.ok) throw new Error('Search failed')
+    return fallbackRes.json()
+  }
+  const data = await res.json()
+  // Transform to match old format
+  return {
+    cards: data.results,
+    total: data.total,
+    query: data.query,
+  }
+}
+
+// Advanced search with all filters
+export interface AdvancedSearchParams {
+  q?: string
+  set_id?: number
+  stock?: 'all' | 'in_stock' | 'out_of_stock'
+  sort_by?: 'sku' | 'name' | 'quantity' | 'price'
+  order?: 'asc' | 'desc'
+  page?: number
+  page_size?: number
+}
+
+export interface SearchResponse {
+  query: string
+  results: InventoryItem[]
+  total: number
+  page: number
+  page_size: number
+  source: 'meilisearch' | 'odoo'
+}
+
+export async function advancedSearch(params: AdvancedSearchParams): Promise<SearchResponse> {
+  const searchParams = new URLSearchParams()
+  if (params.q) searchParams.set('q', params.q)
+  if (params.set_id) searchParams.set('set_id', String(params.set_id))
+  if (params.stock) searchParams.set('stock', params.stock)
+  if (params.sort_by) searchParams.set('sort_by', params.sort_by)
+  if (params.order) searchParams.set('order', params.order)
+  if (params.page) searchParams.set('page', String(params.page))
+  if (params.page_size) searchParams.set('page_size', String(params.page_size))
+
+  // Use trailing slash to avoid 307 redirect which loses auth headers
+  const res = await authFetch(`${API_BASE}/search/?${searchParams}`)
   if (!res.ok) throw new Error('Search failed')
   return res.json()
 }
@@ -255,6 +323,23 @@ export function getPrinterPreviewUrl(productId: number): string {
 export async function healthCheck(): Promise<{ status: string; odoo_connected: boolean; version: string }> {
   const res = await fetch(`${API_BASE}/health`)
   if (!res.ok) throw new Error('Health check failed')
+  return res.json()
+}
+
+// Get available warehouses for current user
+export async function getWarehouses(): Promise<Warehouse[]> {
+  const res = await authFetch(`${API_BASE}/auth/warehouses`)
+  if (!res.ok) throw new Error('Failed to fetch warehouses')
+  return res.json()
+}
+
+// Switch active warehouse (admin only)
+export async function switchWarehouse(warehouseId: number): Promise<{ success: boolean; warehouse_id: number; new_token: string }> {
+  const res = await authFetch(`${API_BASE}/auth/switch-warehouse`, {
+    method: 'POST',
+    body: JSON.stringify({ warehouse_id: warehouseId }),
+  })
+  if (!res.ok) throw new Error('Failed to switch warehouse')
   return res.json()
 }
 

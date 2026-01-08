@@ -4,7 +4,12 @@ import io
 import logging
 import re
 import socket
+import warnings
 from urllib.parse import quote_plus
+
+# Suppress brother_ql deprecation warnings (library issue, not ours)
+warnings.filterwarnings("ignore", message=".*brother_ql.devicedependent.*")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="brother_ql")
 
 import barcode
 import qrcode

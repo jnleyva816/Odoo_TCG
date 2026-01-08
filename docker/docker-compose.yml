@@ -4,9 +4,51 @@
 # Services:
 #   - frontend: React web UI (port 3000)
 #   - backend: FastAPI REST API (port 8000)
+#   - redis: Cache & message broker for async tasks
+#   - meilisearch: Fast full-text search engine
+#   - worker: Celery worker for background jobs
 #   - tcg-cli: CLI tool for automation tasks
 
 services:
+  # ==========================================================
+  # Redis - Cache & Message Broker
+  # ==========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: tcg-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"  # Use 6380 to avoid conflict with other Redis instances
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================================
+  # Meilisearch - Fast Full-Text Search
+  # ==========================================================
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: tcg-meilisearch
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_ENV=production
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-changeme-in-production}
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - meili-data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # ==========================================================
   # Frontend - React Web UI
   # ==========================================================
@@ -41,17 +83,18 @@ services:
     environment:
       - ODOO_URL=${ODOO_URL:-http://192.168.10.105:8069}
       - ODOO_DB=${ODOO_DB:-TCG-Cards}
-      - ODOO_USER=${ODOO_USER}
-      - ODOO_PASSWORD=${ODOO_PASSWORD}
+      - ODOO_USER=${ODOO_USER:-admin}
+      - ODOO_PASSWORD=${ODOO_PASSWORD:-admin}
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=8000
       - DEBUG=${DEBUG:-false}
-      # Authentication (REQUIRED)
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      # Authentication
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
       - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-1440}
-      - ADMIN_USERNAME=${ADMIN_USERNAME}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # Legacy admin settings (not used with Odoo auth)
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       # Email notifications (optional)
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
@@ -69,8 +112,15 @@ services:
       - PRINTER_PORT=${PRINTER_PORT:-9100}
       - PRINTER_MODEL=${PRINTER_MODEL:-QL-800}
       - PRINTER_LABEL_SIZE=${PRINTER_LABEL_SIZE:-29x90}
-    volumes:
-      - auth-data:/data
+      # Redis & Meilisearch
+      - REDIS_URL=redis://redis:6379/0
+      - MEILI_URL=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-changeme-in-production}
+    depends_on:
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -91,13 +141,44 @@ services:
     environment:
       - ODOO_URL=${ODOO_URL:-http://192.168.10.105:8069}
       - ODOO_DB=${ODOO_DB:-TCG-Cards}
-      - ODOO_USER=${ODOO_USER}
-      - ODOO_PASSWORD=${ODOO_PASSWORD}
+      - ODOO_USER=${ODOO_USER:-admin}
+      - ODOO_PASSWORD=${ODOO_PASSWORD:-admin}
     # Override default command
     entrypoint: ["tcg"]
 
   # ==========================================================
-  # Price Sync - Cron job for syncing prices
+  # Celery Worker - Background Task Processing
+  # ==========================================================
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: tcg-worker
+    restart: unless-stopped
+    command: celery -A app.worker worker --loglevel=info --concurrency=2
+    environment:
+      - ODOO_URL=${ODOO_URL:-http://192.168.10.105:8069}
+      - ODOO_DB=${ODOO_DB:-TCG-Cards}
+      - ODOO_USER=${ODOO_USER:-admin}
+      - ODOO_PASSWORD=${ODOO_PASSWORD:-admin}
+      - REDIS_URL=redis://redis:6379/0
+      - MEILI_URL=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-changeme-in-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
+    depends_on:
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.worker", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================
+  # Price Sync - Cron job for syncing prices (Legacy)
   # ==========================================================
   price-sync:
     build:
@@ -110,8 +191,8 @@ services:
     environment:
       - ODOO_URL=${ODOO_URL:-http://192.168.10.105:8069}
       - ODOO_DB=${ODOO_DB:-TCG-Cards}
-      - ODOO_USER=${ODOO_USER}
-      - ODOO_PASSWORD=${ODOO_PASSWORD}
+      - ODOO_USER=${ODOO_USER:-admin}
+      - ODOO_PASSWORD=${ODOO_PASSWORD:-admin}
     command: ["sync"]
 
 networks:
@@ -120,5 +201,6 @@ networks:
 
 volumes:
   # Persistent data volumes
-  auth-data:  # SQLite auth database
+  redis-data:     # Redis persistence
+  meili-data:     # Meilisearch index data
   tcg-data:

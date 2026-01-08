@@ -1,3 +1,4 @@
+// @refresh reset - Context files export both providers and hooks, disable Fast Refresh
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface Features {
@@ -56,4 +57,5 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
 export function useFeatures() {
   return useContext(FeaturesContext);
 }
+
 

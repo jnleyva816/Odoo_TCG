@@ -16,8 +16,23 @@ from .database import (
     init_db,
     log_login_attempt,
     update_last_login,
+    update_user_warehouse,
+    update_user_warehouse_ids,
+    get_all_users,
 )
 from .models import Token, TokenData, User, UserRole
+
+import json
+
+
+def _parse_warehouse_ids(warehouse_ids_str: str | None) -> list[int] | None:
+    """Parse warehouse_ids from JSON string."""
+    if not warehouse_ids_str:
+        return None
+    try:
+        return json.loads(warehouse_ids_str)
+    except (json.JSONDecodeError, TypeError):
+        return None
 
 
 class AuthService:
@@ -133,6 +148,8 @@ class AuthService:
             email=user_data["email"],
             role=UserRole(user_data["role"]),
             is_active=user_data["is_active"],
+            warehouse_id=user_data.get("warehouse_id"),
+            warehouse_ids=_parse_warehouse_ids(user_data.get("warehouse_ids")),
             created_at=user_data["created_at"],
             last_login=datetime.utcnow(),
         )
@@ -180,6 +197,8 @@ class AuthService:
             email=user_data["email"],
             role=UserRole(user_data["role"]),
             is_active=user_data["is_active"],
+            warehouse_id=user_data.get("warehouse_id"),
+            warehouse_ids=_parse_warehouse_ids(user_data.get("warehouse_ids")),
             created_at=user_data["created_at"],
             last_login=user_data["last_login"],
         )
@@ -189,15 +208,53 @@ class AuthService:
         username: str,
         email: str,
         password: str,
+        warehouse_ids: list[int] | None = None,
     ) -> int:
         """Create an admin user."""
         hashed_password = self.hash_password(password)
+        # Admin gets first warehouse as default if provided
+        default_warehouse = warehouse_ids[0] if warehouse_ids else None
         return await create_user(
             username=username,
             email=email,
             hashed_password=hashed_password,
             role="admin",
+            warehouse_id=default_warehouse,
+            warehouse_ids=warehouse_ids,
         )
+
+    async def create_regular_user(
+        self,
+        username: str,
+        email: str,
+        password: str,
+        warehouse_id: int | None = None,
+    ) -> int:
+        """Create a regular user tied to a specific warehouse."""
+        hashed_password = self.hash_password(password)
+        return await create_user(
+            username=username,
+            email=email,
+            hashed_password=hashed_password,
+            role="user",
+            warehouse_id=warehouse_id,
+            warehouse_ids=[warehouse_id] if warehouse_id else None,
+        )
+
+    async def switch_warehouse(self, user_id: int, warehouse_id: int) -> bool:
+        """Switch user's active warehouse (for admins)."""
+        return await update_user_warehouse(user_id, warehouse_id)
+
+    async def get_users(self) -> list[dict]:
+        """Get all users (admin only)."""
+        users = await get_all_users()
+        return [
+            {
+                **user,
+                "warehouse_ids": _parse_warehouse_ids(user.get("warehouse_ids")),
+            }
+            for user in users
+        ]
 
 
 # Singleton instance

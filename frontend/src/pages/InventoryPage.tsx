@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { LayoutGrid, List, ChevronLeft, ChevronRight, Loader2, Package, Filter, Search, X } from 'lucide-react'
+import { LayoutGrid, List, ChevronLeft, ChevronRight, Loader2, Package, Filter, Search, X, Warehouse } from 'lucide-react'
 import { getInventory, getSets } from '../api/client'
 import CardImage from '../components/CardImage'
 import CardModal from '../components/CardModal'
+import { useAuth } from '../contexts/AuthContext'
 
 type ViewMode = 'grid' | 'list'
 type StockFilter = 'all' | 'in_stock' | 'out_of_stock'
@@ -11,6 +12,7 @@ type SortField = 'sku' | 'name' | 'quantity' | 'price'
 type SortOrder = 'asc' | 'desc'
 
 export default function InventoryPage() {
+  const { currentWarehouse, user } = useAuth()
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -44,9 +46,9 @@ export default function InventoryPage() {
     queryFn: getSets,
   })
 
-  // Fetch inventory
+  // Fetch inventory - includes warehouse_id in cache key so it refetches on switch
   const { data: inventory, isLoading, isFetching } = useQuery({
-    queryKey: ['inventory', debouncedSearch, selectedSet, stockFilter, sortBy, sortOrder, page, pageSize],
+    queryKey: ['inventory', debouncedSearch, selectedSet, stockFilter, sortBy, sortOrder, page, pageSize, user?.warehouse_id],
     queryFn: () => getInventory({
       search: debouncedSearch || undefined,
       set_id: selectedSet,
@@ -88,9 +90,17 @@ export default function InventoryPage() {
           <h1 className="font-display text-3xl font-bold text-surface-900 dark:text-white">
             Inventory
           </h1>
-          <p className="text-surface-500 mt-1">
-            {inventory?.total ?? 0} cards
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            {currentWarehouse && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm">
+                <Warehouse size={14} />
+                {currentWarehouse.name}
+              </span>
+            )}
+            <span className="text-surface-500">
+              {inventory?.total ?? 0} cards
+            </span>
+          </div>
         </div>
 
         {/* View Toggle */}

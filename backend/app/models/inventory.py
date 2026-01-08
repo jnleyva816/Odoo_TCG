@@ -53,3 +53,4 @@ class StockAdjustment(BaseModel):
     product_id: int = Field(..., description="Odoo product ID")
     quantity_change: int = Field(..., description="Amount to add (positive) or remove (negative)")
     reason: str | None = Field(None, description="Optional reason for adjustment")
+

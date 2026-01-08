@@ -39,6 +39,8 @@ class User(UserBase):
     id: int
     role: UserRole = UserRole.USER
     is_active: bool = True
+    warehouse_id: int | None = None  # Current active warehouse
+    warehouse_ids: list[int] | None = None  # Allowed warehouses (admins can access multiple)
     created_at: datetime
     last_login: datetime | None = None
 
@@ -50,6 +52,15 @@ class UserInDB(User):
     """User model with hashed password (internal use only)."""
 
     hashed_password: str
+
+
+class UserCreateAdmin(UserBase):
+    """User creation model for admin endpoint."""
+
+    password: str = Field(..., min_length=8)
+    role: UserRole = UserRole.USER
+    warehouse_id: int | None = None
+    warehouse_ids: list[int] | None = None
 
 
 class Token(BaseModel):
@@ -77,3 +88,4 @@ class LoginAttempt(BaseModel):
     user_agent: str
     success: bool
     timestamp: datetime
+

@@ -6,9 +6,9 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth.router import router as auth_router
-from .auth.service import get_auth_service
+from .auth.odoo_auth import get_odoo_auth_service
 from .config import get_settings
-from .routers import cards_router, images_router, inventory_router, labels_router, sets_router
+from .routers import cards_router, images_router, inventory_router, labels_router, sets_router, search_router
 from .services import get_odoo_service
 
 
@@ -17,16 +17,17 @@ async def lifespan(app: FastAPI):
     """Application lifespan - connect to Odoo on startup."""
     settings = get_settings()
     odoo = get_odoo_service()
-    auth = get_auth_service()
+    auth = get_odoo_auth_service()
 
-    # Initialize auth (creates admin user if needed)
-    print("🔐 Initializing authentication...")
+    # Initialize Odoo-based auth
+    print("🔐 Initializing Odoo authentication...")
     await auth.initialize()
 
     print(f"🔌 Connecting to Odoo at {settings.odoo_url}...")
     try:
         await odoo.connect()
         print("✅ Odoo connection established")
+        print("   Users authenticate directly with Odoo credentials")
     except Exception as e:
         print(f"⚠️  Odoo connection failed: {e}")
         print("   Server will retry on first request")
@@ -48,6 +49,8 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
         openapi_url="/openapi.json",
         lifespan=lifespan,
+        # Disable trailing slash redirects - they lose Authorization headers
+        redirect_slashes=False,
     )
 
     # CORS middleware
@@ -87,6 +90,11 @@ def create_app() -> FastAPI:
     )
     app.include_router(
         sets_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
+    app.include_router(
+        search_router,
         prefix="/api",
         dependencies=[Depends(get_current_user)],
     )

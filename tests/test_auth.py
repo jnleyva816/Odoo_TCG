@@ -221,3 +221,4 @@ class TestTokenModel:
         assert token.token_type == "bearer"
         assert token.expires_in == 86400
 
+

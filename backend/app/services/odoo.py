@@ -214,8 +214,12 @@ class OdooService:
         sort_order: str = "asc",
         page: int = 1,
         page_size: int = 20,
+        warehouse_id: int | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
-        """Get paginated inventory with filtering, searching, and sorting."""
+        """Get paginated inventory with filtering, searching, and sorting.
+
+        If warehouse_id is provided, quantities are computed for that specific warehouse.
+        """
         # Build domain
         domain: list[Any] = []
 
@@ -227,10 +231,6 @@ class OdooService:
 
         if set_id:
             domain.append(("categ_id", "=", set_id))
-        if stock_filter == "in_stock":
-            domain.append(("qty_available", ">", 0))
-        elif stock_filter == "out_of_stock":
-            domain.append(("qty_available", "<=", 0))
 
         # Map sort fields to Odoo field names
         sort_map = {
@@ -241,6 +241,108 @@ class OdooService:
         }
         order_field = sort_map.get(sort_by, "default_code")
         order = f"{order_field} {sort_order}"
+
+        # If warehouse is specified, we need to get warehouse-specific quantities
+        if warehouse_id:
+            # Get warehouse location ID
+            warehouses = await self.search_read(
+                "stock.warehouse",
+                [("id", "=", warehouse_id)],
+                ["lot_stock_id"],
+                limit=1,
+            )
+            if warehouses and warehouses[0].get("lot_stock_id"):
+                location_id = warehouses[0]["lot_stock_id"][0]
+
+                # For stock filtering, we need to query stock.quant
+                # Get all product IDs in the domain first
+                all_product_ids = await self._execute(
+                    "product.product", "search", domain
+                )
+
+                if stock_filter in ["in_stock", "out_of_stock"]:
+                    # Get quantities from stock.quant for this location
+                    quants = await self.search_read(
+                        "stock.quant",
+                        [
+                            ("product_id", "in", all_product_ids),
+                            ("location_id", "child_of", location_id),
+                        ],
+                        ["product_id", "quantity"],
+                    )
+
+                    # Build product -> quantity map
+                    product_qty: dict[int, float] = {}
+                    for q in quants:
+                        pid = q["product_id"][0]
+                        product_qty[pid] = product_qty.get(pid, 0) + q["quantity"]
+
+                    # Filter product IDs based on stock filter
+                    if stock_filter == "in_stock":
+                        filtered_ids = [pid for pid in all_product_ids if product_qty.get(pid, 0) > 0]
+                    else:  # out_of_stock
+                        filtered_ids = [pid for pid in all_product_ids if product_qty.get(pid, 0) <= 0]
+
+                    total = len(filtered_ids)
+                    offset = (page - 1) * page_size
+                    page_ids = filtered_ids[offset : offset + page_size]
+
+                    if not page_ids:
+                        return [], total
+
+                    # Get product details
+                    records = await self.read(
+                        "product.product",
+                        page_ids,
+                        ["id", "default_code", "name", "list_price", "categ_id"],
+                    )
+
+                    # Add quantity info
+                    for r in records:
+                        r["qty_available"] = product_qty.get(r["id"], 0)
+
+                    return records, total
+
+                else:
+                    # No stock filter, get all products and their quantities
+                    total = await self.search_count("product.product", domain)
+                    offset = (page - 1) * page_size
+                    records = await self.search_read(
+                        "product.product",
+                        domain,
+                        ["id", "default_code", "name", "list_price", "categ_id"],
+                        offset=offset,
+                        limit=page_size,
+                        order=order,
+                    )
+
+                    if records:
+                        # Get quantities from stock.quant
+                        product_ids = [r["id"] for r in records]
+                        quants = await self.search_read(
+                            "stock.quant",
+                            [
+                                ("product_id", "in", product_ids),
+                                ("location_id", "child_of", location_id),
+                            ],
+                            ["product_id", "quantity"],
+                        )
+
+                        product_qty: dict[int, float] = {}
+                        for q in quants:
+                            pid = q["product_id"][0]
+                            product_qty[pid] = product_qty.get(pid, 0) + q["quantity"]
+
+                        for r in records:
+                            r["qty_available"] = product_qty.get(r["id"], 0)
+
+                    return records, total
+
+        # Default behavior (no warehouse filter) - stock filtering using qty_available
+        if stock_filter == "in_stock":
+            domain.append(("qty_available", ">", 0))
+        elif stock_filter == "out_of_stock":
+            domain.append(("qty_available", "<=", 0))
 
         # Get total count
         total = await self.search_count("product.product", domain)
@@ -274,59 +376,89 @@ class OdooService:
             order="name",
         )
 
+    async def get_warehouses(self) -> list[dict[str, Any]]:
+        """Get all warehouses from Odoo."""
+        return await self.search_read(
+            "stock.warehouse",
+            [],
+            ["id", "name", "code", "lot_stock_id"],
+            order="name",
+        )
+
+    async def get_warehouse_by_name(self, name: str) -> dict[str, Any] | None:
+        """Get a warehouse by name."""
+        records = await self.search_read(
+            "stock.warehouse",
+            [("name", "=", name)],
+            ["id", "name", "code", "lot_stock_id"],
+            limit=1,
+        )
+        return records[0] if records else None
+
     async def adjust_stock(
         self,
         product_id: int,
         quantity_change: int,
+        warehouse_id: int | None = None,
     ) -> bool:
-        """Adjust stock quantity for a product."""
-        # Read current quantity
-        records = await self.read(
-            "product.product",
-            [product_id],
-            ["qty_available"],
-        )
-        if not records:
-            return False
-
-        current_qty = records[0].get("qty_available", 0)
-        new_qty = max(0, current_qty + quantity_change)
+        """Adjust stock quantity for a product in a specific warehouse."""
+        # Get the location ID for this warehouse
+        location_id = None
+        if warehouse_id:
+            warehouses = await self.search_read(
+                "stock.warehouse",
+                [("id", "=", warehouse_id)],
+                ["lot_stock_id"],
+                limit=1,
+            )
+            if warehouses and warehouses[0].get("lot_stock_id"):
+                location_id = warehouses[0]["lot_stock_id"][0]
 
         # Create inventory adjustment
         try:
             # Find or create quant
+            quant_domain = [("product_id", "=", product_id)]
+            if location_id:
+                quant_domain.append(("location_id", "=", location_id))
+            else:
+                quant_domain.append(("location_id.usage", "=", "internal"))
+
             quants = await self.search_read(
                 "stock.quant",
-                [
-                    ("product_id", "=", product_id),
-                    ("location_id.usage", "=", "internal"),
-                ],
+                quant_domain,
                 ["id", "quantity", "location_id"],
                 limit=1,
             )
 
             if quants:
                 # Update existing quant
+                current_qty = quants[0].get("quantity", 0)
+                new_qty = max(0, current_qty + quantity_change)
                 await self.write(
                     "stock.quant",
                     [quants[0]["id"]],
                     {"quantity": new_qty},
                 )
             else:
-                # Get default location
-                locations = await self.search_read(
-                    "stock.location",
-                    [("usage", "=", "internal")],
-                    ["id"],
-                    limit=1,
-                )
-                if locations:
+                # Get location if not set
+                if not location_id:
+                    locations = await self.search_read(
+                        "stock.location",
+                        [("usage", "=", "internal")],
+                        ["id"],
+                        limit=1,
+                    )
+                    if locations:
+                        location_id = locations[0]["id"]
+
+                if location_id:
+                    new_qty = max(0, quantity_change)
                     await self._execute(
                         "stock.quant",
                         "create",
                         {
                             "product_id": product_id,
-                            "location_id": locations[0]["id"],
+                            "location_id": location_id,
                             "quantity": new_qty,
                         },
                     )
@@ -334,6 +466,33 @@ class OdooService:
             return True
         except Exception:
             return False
+
+    async def get_product_quantity_in_warehouse(
+        self,
+        product_id: int,
+        warehouse_id: int,
+    ) -> int:
+        """Get quantity of a product in a specific warehouse."""
+        warehouses = await self.search_read(
+            "stock.warehouse",
+            [("id", "=", warehouse_id)],
+            ["lot_stock_id"],
+            limit=1,
+        )
+        if not warehouses or not warehouses[0].get("lot_stock_id"):
+            return 0
+
+        location_id = warehouses[0]["lot_stock_id"][0]
+        quants = await self.search_read(
+            "stock.quant",
+            [
+                ("product_id", "=", product_id),
+                ("location_id", "child_of", location_id),
+            ],
+            ["quantity"],
+        )
+
+        return int(sum(q.get("quantity", 0) for q in quants))
 
 
 # Singleton service instance

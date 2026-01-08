@@ -19,15 +19,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from dotenv import load_dotenv
 from tcg_automation.odoo_client import OdooClient
+from tcg_automation.commands.barcodes import generate_ean13, get_next_sequence
 
 load_dotenv()
 
 # ============================================================================
 # CONFIGURATION - Edit these for different sets
 # ============================================================================
-CSV_FILE = "/home/jleyva/Odoo_TCG/src/tcg_automation/csvs/SVPrismaticEvolutionsProductsAndPrices.csv"
-SET_CODE = "svpe"  # lowercase for SKU consistency
-SET_NAME = "SVPE: Prismatic Evolutions"  # Category name format: "CODE: Name"
+CSV_FILE = "/home/jleyva/Odoo_TCG/src/tcg_automation/csvs/SV08SurgingSparksProductsAndPrices.csv"
+SET_CODE = "sv08"  # lowercase for SKU consistency
+SET_NAME = "SV08: Surging Sparks"  # Category name format: "CODE: Name"
 PARENT_CATEGORY = "Pokemon"  # Parent category in Odoo
 
 # Session for faster HTTP requests (connection pooling)
@@ -152,6 +153,11 @@ def main():
     
     print(f"Cards to import: {len(cards)}")
     
+    # Get next barcode sequence
+    print("\nGetting next barcode sequence...")
+    next_barcode_seq = get_next_sequence(client)
+    print(f"Starting barcode sequence: {next_barcode_seq}")
+    
     # Download all images in parallel FIRST
     image_cache = download_images_parallel(cards)
     
@@ -209,8 +215,13 @@ def main():
                 print("-> Updated")
                 updated += 1
             else:
+                # Generate EAN-13 barcode for new products
+                barcode = generate_ean13(next_barcode_seq)
+                vals['barcode'] = barcode
+                next_barcode_seq += 1
+                
                 product_id = client.create('product.product', vals)
-                print(f"-> Created (ID: {product_id})")
+                print(f"-> Created (ID: {product_id}, Barcode: {barcode})")
                 created += 1
         except Exception as e:
             print(f"-> ERROR: {e}")

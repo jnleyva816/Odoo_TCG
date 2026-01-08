@@ -86,3 +86,4 @@ class ImageCache(LRUCache[bytes]):
             return value
         except Exception:
             return None
+

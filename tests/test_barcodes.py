@@ -95,3 +95,4 @@ class TestBarcodeFormat:
         # Sequence 1 should be padded to 000000001
         assert barcode[3:12] == "000000001"
 
+

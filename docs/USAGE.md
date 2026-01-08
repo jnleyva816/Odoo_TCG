@@ -162,3 +162,4 @@ The app is fully responsive and works on mobile devices:
 
 For best results, bookmark the app to your home screen for quick access.
 
+

@@ -1,10 +1,10 @@
-"""Authentication dependencies for FastAPI."""
+"""Authentication dependencies for FastAPI using Odoo auth."""
 
 from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .models import User, UserRole
-from .service import AuthService, get_auth_service
+from .odoo_auth import OdooAuthService, get_odoo_auth_service
 
 # Bearer token security scheme
 security = HTTPBearer(auto_error=False)
@@ -14,7 +14,7 @@ async def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     token: str | None = Query(None, description="JWT token (for img tags)"),
-    auth_service: AuthService = Depends(get_auth_service),
+    auth_service: OdooAuthService = Depends(get_odoo_auth_service),
 ) -> User:
     """Get the current authenticated user from JWT token.
 
@@ -46,7 +46,7 @@ async def get_current_user(
 
 async def get_current_user_optional(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
-    auth_service: AuthService = Depends(get_auth_service),
+    auth_service: OdooAuthService = Depends(get_odoo_auth_service),
 ) -> User | None:
     """Get the current user if authenticated, otherwise None."""
     if not credentials:

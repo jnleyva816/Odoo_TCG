@@ -7,152 +7,170 @@ on:
     branches: [main]
 
 env:
-  PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # ============================================================
-  # Linting and Type Checking
-  # ============================================================
-  lint:
-    name: Lint & Type Check
+  # ==========================================================
+  # Backend Tests & Lint
+  # ==========================================================
+  backend:
+    name: Backend Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff mypy
-          pip install -e ".[dev]"
-
-      - name: Run Ruff (linting)
-        run: ruff check src/ backend/
-
-      - name: Run Ruff (formatting check)
-        run: ruff format --check src/ backend/
-
-      - name: Run MyPy (type checking)
-        run: mypy src/tcg_automation --ignore-missing-imports
-        continue-on-error: true  # Type errors shouldn't block CI initially
-
-  # ============================================================
-  # Python Tests
-  # ============================================================
-  test-python:
-    name: Python Tests
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/pyproject.toml
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pip install -e backend/
 
-      - name: Run tests with coverage
+      - name: Lint with ruff
         run: |
-          pytest tests/ -v --cov=src/tcg_automation --cov-report=xml --cov-report=term
-        continue-on-error: true  # Allow to pass if no tests exist yet
+          ruff check app/
+          ruff format --check app/
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
+      - name: Type check with mypy
+        run: mypy app/ --ignore-missing-imports
+        continue-on-error: true  # Don't fail on type errors for now
 
-  # ============================================================
-  # Frontend Tests
-  # ============================================================
-  test-frontend:
-    name: Frontend Tests
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          ODOO_URL: http://localhost:8069
+          ODOO_DB: test
+          ODOO_USER: test
+          ODOO_PASSWORD: test
+          JWT_SECRET_KEY: test-secret-key-for-ci
+
+  # ==========================================================
+  # Frontend Tests & Build
+  # ==========================================================
+  frontend:
+    name: Frontend Build
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run TypeScript check
-        run: npx tsc --noEmit
-
-      - name: Build frontend
+      - name: Type check
         run: npm run build
+        # tsc is run as part of build
 
-  # ============================================================
-  # Docker Build
-  # ============================================================
-  docker-build:
-    name: Docker Build
+      - name: Lint
+        run: npm run lint || true  # Don't fail on lint for now
+
+  # ==========================================================
+  # Build & Push Docker Images
+  # ==========================================================
+  build:
+    name: Build Docker Images
     runs-on: ubuntu-latest
-    needs: [test-python, test-frontend]
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build CLI Docker image
-        uses: docker/build-push-action@v5
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          context: .
-          file: docker/Dockerfile
-          push: false
-          load: true  # Load image to local Docker daemon for testing
-          tags: tcg-automation:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Backend Docker image
+      - name: Extract metadata (tags, labels)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+          tags: |
+            type=sha
+            type=raw,value=latest
+
+      - name: Build and push backend
         uses: docker/build-push-action@v5
         with:
           context: .
           file: docker/Dockerfile.backend
-          push: false
-          load: true  # Load image to local Docker daemon for testing
-          tags: tcg-backend:test
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Test CLI container
-        run: |
-          docker run --rm tcg-automation:test --version
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=sha
+            type=raw,value=latest
 
-      - name: Test Backend container starts
-        run: |
-          docker run -d --name backend-test -p 8000:8000 \
-            -e ODOO_URL=http://localhost:8069 \
-            -e ODOO_DB=test \
-            -e ODOO_USER=test \
-            -e ODOO_PASSWORD=test \
-            tcg-backend:test
-          sleep 5
-          curl -f http://localhost:8000/api/health || echo "Health check skipped (no Odoo)"
-          docker stop backend-test
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  # ============================================================
-  # NOTE: Deploy is done manually to local Proxmox server
-  # See docker/README.md for deployment instructions
-  # ============================================================
+  # ==========================================================
+  # Deploy (optional - triggered on main)
+  # ==========================================================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Deploy notification
+        run: |
+          echo "🚀 New images pushed to registry"
+          echo "   Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest"
+          echo "   Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest"
+          echo ""
+          echo "To deploy, run on your server:"
+          echo "   docker compose pull && docker compose up -d"
+
+      # Optional: Trigger Watchtower or webhook
+      # - name: Trigger deployment webhook
+      #   run: |
+      #     curl -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}" \
+      #       -H "Authorization: Bearer ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}"

@@ -15,7 +15,7 @@ async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
 
-        # Users table
+        # Users table with warehouse support
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,10 +24,23 @@ async def init_db():
                 hashed_password TEXT NOT NULL,
                 role TEXT DEFAULT 'user',
                 is_active BOOLEAN DEFAULT 1,
+                warehouse_id INTEGER,
+                warehouse_ids TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP
             )
         """)
+
+        # Migration: Add warehouse columns if they don't exist
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN warehouse_id INTEGER")
+        except Exception:
+            pass  # Column already exists
+
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN warehouse_ids TEXT")
+        except Exception:
+            pass  # Column already exists
 
         # Login attempts table (for security monitoring)
         await db.execute("""
@@ -89,18 +102,60 @@ async def create_user(
     email: str,
     hashed_password: str,
     role: str = "user",
+    warehouse_id: int | None = None,
+    warehouse_ids: list[int] | None = None,
 ) -> int:
     """Create a new user."""
+    import json
+
+    warehouse_ids_json = json.dumps(warehouse_ids) if warehouse_ids else None
+
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
             """
-            INSERT INTO users (username, email, hashed_password, role)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO users (username, email, hashed_password, role, warehouse_id, warehouse_ids)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (username, email, hashed_password, role),
+            (username, email, hashed_password, role, warehouse_id, warehouse_ids_json),
         )
         await db.commit()
         return cursor.lastrowid or 0
+
+
+async def update_user_warehouse(user_id: int, warehouse_id: int) -> bool:
+    """Update user's active warehouse."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET warehouse_id = ? WHERE id = ?",
+            (warehouse_id, user_id),
+        )
+        await db.commit()
+        return True
+
+
+async def update_user_warehouse_ids(user_id: int, warehouse_ids: list[int]) -> bool:
+    """Update user's allowed warehouse IDs (for admins)."""
+    import json
+
+    warehouse_ids_json = json.dumps(warehouse_ids)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET warehouse_ids = ? WHERE id = ?",
+            (warehouse_ids_json, user_id),
+        )
+        await db.commit()
+        return True
+
+
+async def get_all_users() -> list[dict[str, Any]]:
+    """Get all users (admin only)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT id, username, email, role, is_active, warehouse_id, warehouse_ids, created_at, last_login FROM users ORDER BY username"
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 async def update_last_login(user_id: int):

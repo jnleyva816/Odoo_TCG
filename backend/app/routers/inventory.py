@@ -6,6 +6,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from ..auth.dependencies import get_current_user
+from ..auth.models import User
 from ..models import (
     InventoryItem,
     InventoryResponse,
@@ -27,9 +29,13 @@ async def get_inventory(
     order: Annotated[SortOrder, Query(description="Sort order")] = SortOrder.ASC,
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
     page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
+    current_user: User = Depends(get_current_user),
     odoo: OdooService = Depends(get_odoo_service),
 ) -> InventoryResponse:
-    """Get paginated inventory with filtering, searching, and sorting."""
+    """Get paginated inventory with filtering, searching, and sorting.
+
+    Inventory is filtered by the user's active warehouse.
+    """
     records, total = await odoo.get_inventory(
         search=search,
         set_id=set_id,
@@ -38,6 +44,7 @@ async def get_inventory(
         sort_order=order.value,
         page=page,
         page_size=page_size,
+        warehouse_id=current_user.warehouse_id,
     )
 
     items = [
@@ -68,12 +75,14 @@ async def get_inventory(
 @router.post("/adjust", response_model=dict)
 async def adjust_stock(
     adjustment: StockAdjustment,
+    current_user: User = Depends(get_current_user),
     odoo: OdooService = Depends(get_odoo_service),
 ) -> dict:
-    """Adjust stock quantity for a product."""
+    """Adjust stock quantity for a product in the user's active warehouse."""
     success = await odoo.adjust_stock(
         product_id=adjustment.product_id,
         quantity_change=adjustment.quantity_change,
+        warehouse_id=current_user.warehouse_id,
     )
 
     if not success:
@@ -82,14 +91,18 @@ async def adjust_stock(
             detail="Failed to adjust stock. Product may not exist.",
         )
 
-    # Get updated quantity
-    records = await odoo.read(
-        "product.product",
-        [adjustment.product_id],
-        ["qty_available"],
-    )
-
-    new_quantity = int(records[0].get("qty_available", 0)) if records else 0
+    # Get updated quantity for this warehouse
+    if current_user.warehouse_id:
+        new_quantity = await odoo.get_product_quantity_in_warehouse(
+            adjustment.product_id, current_user.warehouse_id
+        )
+    else:
+        records = await odoo.read(
+            "product.product",
+            [adjustment.product_id],
+            ["qty_available"],
+        )
+        new_quantity = int(records[0].get("qty_available", 0)) if records else 0
 
     return {
         "success": True,

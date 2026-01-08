@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Search, X, Plus, Minus, Printer, Loader2, Package } from 'lucide-react'
-import { searchCards, adjustStock, Card } from '../api/client'
+import { searchCards, adjustStock, printLabel, Card } from '../api/client'
 import CardImage from '../components/CardImage'
 
 interface QueueItem {
@@ -89,7 +89,7 @@ export default function ScannerPage() {
     }))
   }
 
-  // Process queue mutation
+  // Process queue mutation (add to inventory)
   const processMutation = useMutation({
     mutationFn: async () => {
       for (const item of queue) {
@@ -101,6 +101,26 @@ export default function ScannerPage() {
     },
     onSuccess: () => {
       setQueue([])
+      inputRef.current?.focus()
+    },
+  })
+
+  // Print labels mutation - prints one label per quantity
+  const printMutation = useMutation({
+    mutationFn: async () => {
+      for (const item of queue) {
+        // Print label once for each quantity
+        for (let i = 0; i < item.quantity; i++) {
+          await printLabel(item.card.id)
+          // Small delay between prints to not overwhelm the printer
+          if (i < item.quantity - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        }
+      }
+    },
+    onSuccess: () => {
+      // Don't clear queue after printing - user might want to add to inventory too
       inputRef.current?.focus()
     },
   })
@@ -287,9 +307,19 @@ export default function ScannerPage() {
                     )}
                   </button>
 
-                  <button className="btn btn-secondary w-full">
-                    <Printer size={18} />
-                    Print Labels
+                  <button
+                    onClick={() => printMutation.mutate()}
+                    disabled={printMutation.isPending}
+                    className="btn btn-secondary w-full"
+                  >
+                    {printMutation.isPending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Printer size={18} />
+                        Print {totalItems} Labels
+                      </>
+                    )}
                   </button>
 
                   <button

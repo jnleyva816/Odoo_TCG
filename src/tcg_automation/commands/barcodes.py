@@ -279,3 +279,4 @@ def verify_barcodes(set_code: str | None = None) -> dict[str, Any]:
             console.print(f"  ... and {len(missing) - 10} more")
 
     return stats
+

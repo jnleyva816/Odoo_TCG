@@ -1,8 +1,9 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Sun, Moon, ScanLine, Package, Database, LogOut, User } from 'lucide-react'
+import { Sun, Moon, ScanLine, Package, Database, LogOut, User, Warehouse, ChevronDown, Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useFeatures } from '../contexts/FeaturesContext'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface LayoutProps {
   children: ReactNode
@@ -12,8 +13,27 @@ interface LayoutProps {
 
 export default function Layout({ children, darkMode, onToggleDark }: LayoutProps) {
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { user, logout, warehouses, currentWarehouse, canSwitchWarehouse, switchWarehouse } = useAuth()
   const { features } = useFeatures()
+  const [warehouseMenuOpen, setWarehouseMenuOpen] = useState(false)
+  const [isSwitching, setIsSwitching] = useState(false)
+  const queryClient = useQueryClient()
+
+  const handleWarehouseSwitch = async (warehouseId: number) => {
+    if (isSwitching || warehouseId === currentWarehouse?.id) return
+    
+    setIsSwitching(true)
+    try {
+      await switchWarehouse(warehouseId)
+      // Invalidate inventory queries to refetch with new warehouse
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      setWarehouseMenuOpen(false)
+    } catch (error) {
+      console.error('Failed to switch warehouse:', error)
+    } finally {
+      setIsSwitching(false)
+    }
+  }
 
   // Build nav items based on enabled features
   const navItems = [
@@ -63,6 +83,65 @@ export default function Layout({ children, darkMode, onToggleDark }: LayoutProps
 
           {/* User menu */}
           <div className="flex items-center gap-2">
+            {/* Warehouse selector for admins */}
+            {canSwitchWarehouse && currentWarehouse && (
+              <div className="relative">
+                <button
+                  onClick={() => setWarehouseMenuOpen(!warehouseMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-sm transition-colors"
+                  disabled={isSwitching}
+                >
+                  <Warehouse size={16} />
+                  <span className="hidden md:inline max-w-[150px] truncate">{currentWarehouse.name}</span>
+                  <ChevronDown size={14} className={`transition-transform ${warehouseMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {warehouseMenuOpen && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setWarehouseMenuOpen(false)}
+                    />
+                    {/* Dropdown */}
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-surface-800 border border-surface-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                      <div className="px-3 py-2 border-b border-surface-700">
+                        <p className="text-xs text-surface-400 uppercase tracking-wider">Switch Warehouse</p>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {warehouses.map((warehouse) => (
+                          <button
+                            key={warehouse.id}
+                            onClick={() => handleWarehouseSwitch(warehouse.id)}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-surface-700 transition-colors ${
+                              warehouse.id === currentWarehouse.id ? 'bg-surface-700/50' : ''
+                            }`}
+                            disabled={isSwitching}
+                          >
+                            <div>
+                              <p className="text-sm text-white">{warehouse.name}</p>
+                              <p className="text-xs text-surface-400">{warehouse.code}</p>
+                            </div>
+                            {warehouse.id === currentWarehouse.id && (
+                              <Check size={16} className="text-green-400" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Show current warehouse for non-admin users */}
+            {!canSwitchWarehouse && currentWarehouse && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800/50 text-sm">
+                <Warehouse size={16} className="text-surface-400" />
+                <span className="text-surface-300 max-w-[120px] truncate">{currentWarehouse.name}</span>
+              </div>
+            )}
+
             {/* Current user */}
             {user && (
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800/50 text-sm">
