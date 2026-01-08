@@ -2,32 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =============================================================
+   TCG INVENTORY - MODERN DESIGN SYSTEM
+   Color Palette: Red / White / Dark Gray
+   Style: Modern, sleek, friendly rounded corners
+   ============================================================= */
+
 :root {
+  /* Core colors - Light mode */
   --color-bg: #fafafa;
   --color-surface: #ffffff;
+  --color-surface-alt: #f4f4f5;
   --color-border: #e4e4e7;
   --color-text: #18181b;
-  --color-text-muted: #71717a;
-  --color-accent: #dc2626;
-  --color-accent-hover: #b91c1c;
+  --color-text-muted: #52525b;
+  --color-text-subtle: #71717a;
+  
+  /* Primary: Red */
+  --color-primary: #ef4444;
+  --color-primary-hover: #dc2626;
+  --color-primary-soft: #fef2f2;
 }
 
 .dark {
+  /* Core colors - Dark mode */
   --color-bg: #09090b;
   --color-surface: #18181b;
-  --color-border: #27272a;
+  --color-surface-alt: #27272a;
+  --color-border: #3f3f46;
   --color-text: #fafafa;
   --color-text-muted: #a1a1aa;
-  --color-accent: #ef4444;
-  --color-accent-hover: #f87171;
+  --color-text-subtle: #71717a;
+  
+  --color-primary: #ef4444;
+  --color-primary-hover: #f87171;
+  --color-primary-soft: #450a0a;
 }
+
+/* =============================================================
+   BASE STYLES
+   ============================================================= */
 
 * {
   box-sizing: border-box;
 }
 
 html {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -38,16 +59,20 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Scrollbar styling */
+/* =============================================================
+   SCROLLBAR - Subtle, modern
+   ============================================================= */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -59,88 +84,184 @@ body {
   background: var(--color-text-muted);
 }
 
-/* Focus styles */
+/* =============================================================
+   FOCUS & SELECTION
+   ============================================================= */
+
 *:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Card image loading placeholder */
-.card-image-placeholder {
-  background: linear-gradient(
-    110deg,
-    var(--color-surface) 8%,
-    var(--color-border) 18%,
-    var(--color-surface) 33%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
+::selection {
+  background: var(--color-primary);
+  color: white;
 }
 
-/* High quality image rendering */
+/* =============================================================
+   IMAGES
+   ============================================================= */
+
 img {
   image-rendering: high-quality;
   -ms-interpolation-mode: bicubic;
 }
 
-/* Modal images should be extra crisp */
-.modal-card-image {
-  image-rendering: high-quality;
-  backface-visibility: hidden;
-  transform: translateZ(0);
+.card-image-placeholder {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-surface-alt) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-/* Button base */
+/* =============================================================
+   COMPONENT LAYER
+   ============================================================= */
+
 @layer components {
+  /* -------------------------------------------------------------
+     BUTTONS - Modern, friendly
+     ------------------------------------------------------------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 
-           font-medium rounded-lg transition-all duration-150
-           focus-visible:ring-2 focus-visible:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 
+           px-4 py-2.5 font-semibold text-sm
+           rounded-lg
+           transition-all duration-200 ease-out
+           disabled:opacity-50 disabled:cursor-not-allowed
+           active:scale-[0.98];
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700
-           focus-visible:ring-primary-500;
+    @apply bg-primary-500 text-white
+           hover:bg-primary-600
+           shadow-sm hover:shadow-md;
   }
 
   .btn-secondary {
-    @apply bg-surface-200 dark:bg-surface-700 text-surface-900 dark:text-surface-100
-           hover:bg-surface-300 dark:hover:bg-surface-600
-           focus-visible:ring-surface-500;
+    @apply bg-surface-100 dark:bg-surface-800 
+           text-surface-700 dark:text-surface-200
+           hover:bg-surface-200 dark:hover:bg-surface-700
+           border border-surface-200 dark:border-surface-700;
   }
 
   .btn-ghost {
-    @apply text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800;
+    @apply bg-transparent 
+           text-surface-600 dark:text-surface-400
+           hover:bg-surface-100 dark:hover:bg-surface-800;
   }
 
+  .btn-danger {
+    @apply bg-red-500 text-white hover:bg-red-600;
+  }
+
+  /* -------------------------------------------------------------
+     INPUTS - Clean, modern
+     ------------------------------------------------------------- */
   .input {
-    @apply w-full px-4 py-2 bg-white dark:bg-surface-900 
-           border border-surface-300 dark:border-surface-700
-           rounded-lg text-surface-900 dark:text-surface-100
-           placeholder:text-surface-500
-           focus:border-primary-500 focus:ring-1 focus:ring-primary-500
-           transition-colors duration-150;
+    @apply w-full px-4 py-2.5 
+           bg-white dark:bg-surface-900 
+           border border-surface-200 dark:border-surface-700
+           rounded-lg
+           text-surface-900 dark:text-surface-100
+           placeholder:text-surface-400 dark:placeholder:text-surface-500
+           focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
+           transition-all duration-200;
+  }
+
+  .input-lg {
+    @apply input text-lg py-3;
   }
 
   .select {
-    @apply input appearance-none cursor-pointer
-           bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')]
-           bg-no-repeat bg-[center_right_0.5rem] pr-10;
+    @apply input appearance-none cursor-pointer pr-10
+           bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23a1a1aa%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')]
+           bg-no-repeat bg-[center_right_0.75rem];
   }
 
+  /* -------------------------------------------------------------
+     CARDS - Soft shadows, rounded
+     ------------------------------------------------------------- */
   .card {
-    @apply bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800
-           rounded-xl shadow-sm;
+    @apply bg-white dark:bg-surface-900 
+           border border-surface-200 dark:border-surface-800
+           rounded-xl
+           transition-all duration-200;
+  }
+
+  .card-elevated {
+    @apply card shadow-soft hover:shadow-soft-lg;
+  }
+
+  /* -------------------------------------------------------------
+     BADGES - Pill-shaped
+     ------------------------------------------------------------- */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1
+           text-xs font-semibold
+           rounded-full;
+  }
+
+  .badge-primary {
+    @apply bg-primary-500 text-white;
+  }
+
+  .badge-outline {
+    @apply bg-surface-100 dark:bg-surface-800 
+           text-surface-600 dark:text-surface-300
+           border border-surface-200 dark:border-surface-700;
+  }
+
+  .badge-success {
+    background-color: rgb(34 197 94 / 0.1);
+    color: #22c55e;
+  }
+
+  .badge-error {
+    background-color: rgb(239 68 68 / 0.1);
+    color: #ef4444;
+  }
+
+  /* -------------------------------------------------------------
+     DIVIDERS
+     ------------------------------------------------------------- */
+  .divider {
+    @apply border-t border-surface-200 dark:border-surface-800;
+  }
+
+  /* -------------------------------------------------------------
+     SECTION HEADERS
+     ------------------------------------------------------------- */
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-wider 
+           text-surface-500
+           mb-3;
   }
 }
 
+/* =============================================================
+   UTILITY LAYER
+   ============================================================= */
+
+@layer utilities {
+  /* Text styles */
+  .text-display {
+    @apply font-semibold tracking-tight;
+  }
+
+  /* Stagger animation delays */
+  .stagger-1 { animation-delay: 50ms; }
+  .stagger-2 { animation-delay: 100ms; }
+  .stagger-3 { animation-delay: 150ms; }
+  .stagger-4 { animation-delay: 200ms; }
+  .stagger-5 { animation-delay: 250ms; }
+}

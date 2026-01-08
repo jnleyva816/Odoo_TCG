@@ -26,7 +26,6 @@ export default function InventoryPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
   const pageSize = 24
 
-  // Debounce search
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
@@ -40,13 +39,11 @@ export default function InventoryPage() {
     }
   }, [searchQuery])
 
-  // Fetch sets for filter
   const { data: sets = [] } = useQuery({
     queryKey: ['sets'],
     queryFn: getSets,
   })
 
-  // Fetch inventory - includes warehouse_id in cache key so it refetches on switch
   const { data: inventory, isLoading, isFetching } = useQuery({
     queryKey: ['inventory', debouncedSearch, selectedSet, stockFilter, sortBy, sortOrder, page, pageSize, user?.warehouse_id],
     queryFn: () => getInventory({
@@ -83,53 +80,53 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-6 lg:py-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 animate-slide-in-up">
         <div>
-          <h1 className="font-display text-3xl font-bold text-surface-900 dark:text-white">
+          <h1 className="text-2xl font-semibold text-surface-900 dark:text-white">
             Inventory
           </h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-3 mt-1">
             {currentWarehouse && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm">
-                <Warehouse size={14} />
+              <span className="badge badge-outline">
+                <Warehouse size={12} className="mr-1.5" />
                 {currentWarehouse.name}
               </span>
             )}
-            <span className="text-surface-500">
+            <span className="text-sm text-surface-500">
               {inventory?.total ?? 0} cards
             </span>
           </div>
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center gap-2 bg-surface-100 dark:bg-surface-800 rounded-lg p-1">
+        <div className="flex items-center bg-surface-100 dark:bg-surface-800 rounded-lg p-1">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-md transition-colors ${
+            className={`p-2 rounded-md transition-all ${
               viewMode === 'grid'
-                ? 'bg-white dark:bg-surface-700 shadow-sm'
+                ? 'bg-white dark:bg-surface-700 shadow-sm text-surface-900 dark:text-white'
                 : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
             }`}
           >
-            <LayoutGrid size={20} />
+            <LayoutGrid size={18} />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
+            className={`p-2 rounded-md transition-all ${
               viewMode === 'list'
-                ? 'bg-white dark:bg-surface-700 shadow-sm'
+                ? 'bg-white dark:bg-surface-700 shadow-sm text-surface-900 dark:text-white'
                 : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
             }`}
           >
-            <List size={20} />
+            <List size={18} />
           </button>
         </div>
       </div>
 
       {/* Search */}
-      <div className="relative mb-4">
+      <div className="relative mb-4 animate-slide-in-up" style={{ animationDelay: '50ms' }}>
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400" size={20} />
         <input
           ref={searchRef}
@@ -143,7 +140,7 @@ export default function InventoryPage() {
         {searchQuery && (
           <button
             onClick={clearSearch}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-400 hover:text-primary-500 transition-colors"
           >
             <X size={20} />
           </button>
@@ -151,14 +148,13 @@ export default function InventoryPage() {
       </div>
 
       {/* Filters */}
-      <div className="card p-4 mb-6">
+      <div className="card p-4 mb-6 animate-slide-in-up" style={{ animationDelay: '100ms' }}>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter size={18} className="text-surface-500" />
-            <span className="text-sm font-medium text-surface-600 dark:text-surface-400">Filters:</span>
+          <div className="flex items-center gap-2 text-surface-500">
+            <Filter size={16} />
+            <span className="text-sm font-medium">Filters</span>
           </div>
 
-          {/* Set Filter */}
           <select
             value={selectedSet || ''}
             onChange={(e) => handleSetChange(e.target.value)}
@@ -172,7 +168,6 @@ export default function InventoryPage() {
             ))}
           </select>
 
-          {/* Stock Filter */}
           <select
             value={stockFilter}
             onChange={(e) => {
@@ -186,16 +181,15 @@ export default function InventoryPage() {
             <option value="out_of_stock">Out of Stock</option>
           </select>
 
-          {/* Sort */}
           <div className="flex items-center gap-2 ml-auto">
             <span className="text-sm text-surface-500">Sort:</span>
             {(['sku', 'name', 'quantity', 'price'] as SortField[]).map((field) => (
               <button
                 key={field}
                 onClick={() => handleSortChange(field)}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                   sortBy === field
-                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                    ? 'bg-primary-500 text-white'
                     : 'text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800'
                 }`}
               >
@@ -227,11 +221,11 @@ export default function InventoryPage() {
 
       {/* Grid View */}
       {!isLoading && viewMode === 'grid' && inventory && inventory.items.length > 0 && (
-        <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 ${isFetching ? 'opacity-70' : ''}`}>
+        <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 ${isFetching ? 'opacity-70' : ''}`}>
           {inventory.items.map((item, index) => (
             <div
               key={item.id}
-              className="card p-3 cursor-pointer hover:border-primary-500 hover:shadow-md transition-all animate-fade-in"
+              className="card p-3 cursor-pointer hover:shadow-soft hover:border-primary-500/50 transition-all animate-fade-in"
               style={{ animationDelay: `${index * 20}ms` }}
               onClick={() => setSelectedCardId(item.id)}
             >
@@ -239,7 +233,7 @@ export default function InventoryPage() {
                 productId={item.id}
                 alt={item.name}
                 size="image_256"
-                className="aspect-[2.5/3.5] rounded-lg mb-3"
+                className="aspect-[2.5/3.5] rounded-lg mb-2"
               />
               <div className="text-xs font-mono text-surface-500 truncate">
                 {item.sku}
@@ -248,12 +242,12 @@ export default function InventoryPage() {
                 {item.name}
               </div>
               <div className="flex items-center justify-between mt-2">
-                <span className={`text-sm font-medium ${
-                  item.quantity > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                <span className={`text-xs font-medium ${
+                  item.quantity > 0 ? 'text-green-500' : 'text-red-500'
                 }`}>
                   {item.quantity} in stock
                 </span>
-                <span className="text-sm font-bold text-surface-900 dark:text-white">
+                <span className="text-sm font-semibold text-surface-900 dark:text-white">
                   ${parseFloat(item.price).toFixed(2)}
                 </span>
               </div>
@@ -314,12 +308,12 @@ export default function InventoryPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className={`font-medium ${
-                      item.quantity > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                      item.quantity > 0 ? 'text-green-500' : 'text-red-500'
                     }`}>
                       {item.quantity}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right font-bold text-surface-900 dark:text-white">
+                  <td className="px-4 py-3 text-right font-semibold text-surface-900 dark:text-white">
                     ${parseFloat(item.price).toFixed(2)}
                   </td>
                 </tr>
@@ -331,17 +325,17 @@ export default function InventoryPage() {
 
       {/* Pagination */}
       {inventory && inventory.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-8">
+        <div className="flex items-center justify-center gap-4 mt-8 animate-fade-in">
           <button
             onClick={() => setPage(page - 1)}
             disabled={page === 1}
             className="btn btn-secondary"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={16} />
             Previous
           </button>
           
-          <span className="text-sm text-surface-600 dark:text-surface-400">
+          <span className="text-sm text-surface-500">
             Page {page} of {inventory.total_pages}
           </span>
           
@@ -351,7 +345,7 @@ export default function InventoryPage() {
             className="btn btn-secondary"
           >
             Next
-            <ChevronRight size={18} />
+            <ChevronRight size={16} />
           </button>
         </div>
       )}

@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import Layout from './components/Layout'
+import { useEffect } from 'react'
+import { Sidebar } from './components/Sidebar'
 import ScannerPage from './pages/ScannerPage'
 import InventoryPage from './pages/InventoryPage'
 import SetsPage from './pages/SetsPage'
 import LoginPage from './pages/LoginPage'
+import DashboardPage from './pages/DashboardPage'
+import SettingsPage from './pages/SettingsPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FeaturesProvider, useFeatures } from './contexts/FeaturesContext'
-import { InstallPrompt } from './components/InstallPrompt'
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -15,8 +16,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950 transition-colors">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-500 border-t-transparent"></div>
       </div>
     )
   }
@@ -29,36 +30,39 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode')
-    return saved ? JSON.parse(saved) : true
-  })
   const { features } = useFeatures()
 
+  // Apply saved theme on mount
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode))
-    if (darkMode) {
+    const saved = localStorage.getItem('theme')
+    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
     }
-  }, [darkMode])
-
-  // Determine default route based on enabled features
-  const defaultRoute = features.scanner_page ? '/scanner' : 
-                       features.inventory_page ? '/inventory' : '/login'
+  }, [])
 
   return (
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Protected routes */}
+      {/* Protected routes with Sidebar */}
       <Route
         path="/"
         element={
           <ProtectedRoute>
-            <Navigate to={defaultRoute} replace />
+            <Navigate to="/dashboard" replace />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Dashboard */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Sidebar>
+              <DashboardPage />
+            </Sidebar>
           </ProtectedRoute>
         }
       />
@@ -69,9 +73,9 @@ function AppRoutes() {
           path="/scanner"
           element={
             <ProtectedRoute>
-              <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
+              <Sidebar>
                 <ScannerPage />
-              </Layout>
+              </Sidebar>
             </ProtectedRoute>
           }
         />
@@ -83,9 +87,9 @@ function AppRoutes() {
           path="/inventory"
           element={
             <ProtectedRoute>
-              <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
+              <Sidebar>
                 <InventoryPage />
-              </Layout>
+              </Sidebar>
             </ProtectedRoute>
           }
         />
@@ -97,16 +101,28 @@ function AppRoutes() {
           path="/sets"
           element={
             <ProtectedRoute>
-              <Layout darkMode={darkMode} onToggleDark={() => setDarkMode(!darkMode)}>
+              <Sidebar>
                 <SetsPage />
-              </Layout>
+              </Sidebar>
             </ProtectedRoute>
           }
         />
       )}
 
+      {/* Settings */}
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Sidebar>
+              <SettingsPage />
+            </Sidebar>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Catch-all redirect */}
-      <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
@@ -117,7 +133,6 @@ function App() {
       <FeaturesProvider>
         <AuthProvider>
           <AppRoutes />
-          <InstallPrompt />
         </AuthProvider>
       </FeaturesProvider>
     </BrowserRouter>

@@ -17,12 +17,10 @@ export default function ScannerPage() {
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
-  // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  // Debounced search
   const performSearch = useCallback(async (q: string) => {
     if (q.length < 2) {
       setResults([])
@@ -53,7 +51,6 @@ export default function ScannerPage() {
     }, 300)
   }
 
-  // Add card to queue
   const addToQueue = (card: Card) => {
     setQueue(prev => {
       const existing = prev.find(item => item.card.id === card.id)
@@ -67,18 +64,15 @@ export default function ScannerPage() {
       return [...prev, { card, quantity: 1 }]
     })
     
-    // Clear search
     setQuery('')
     setResults([])
     inputRef.current?.focus()
   }
 
-  // Remove from queue
   const removeFromQueue = (cardId: number) => {
     setQueue(prev => prev.filter(item => item.card.id !== cardId))
   }
 
-  // Update queue quantity
   const updateQueueQuantity = (cardId: number, delta: number) => {
     setQueue(prev => prev.map(item => {
       if (item.card.id === cardId) {
@@ -89,7 +83,6 @@ export default function ScannerPage() {
     }))
   }
 
-  // Process queue mutation (add to inventory)
   const processMutation = useMutation({
     mutationFn: async () => {
       for (const item of queue) {
@@ -105,14 +98,11 @@ export default function ScannerPage() {
     },
   })
 
-  // Print labels mutation - prints one label per quantity
   const printMutation = useMutation({
     mutationFn: async () => {
       for (const item of queue) {
-        // Print label once for each quantity
         for (let i = 0; i < item.quantity; i++) {
           await printLabel(item.card.id)
-          // Small delay between prints to not overwhelm the printer
           if (i < item.quantity - 1) {
             await new Promise(resolve => setTimeout(resolve, 500))
           }
@@ -120,7 +110,6 @@ export default function ScannerPage() {
       }
     },
     onSuccess: () => {
-      // Don't clear queue after printing - user might want to add to inventory too
       inputRef.current?.focus()
     },
   })
@@ -128,11 +117,11 @@ export default function ScannerPage() {
   const totalItems = queue.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="grid lg:grid-cols-[1fr,400px] gap-8">
+    <div className="max-w-6xl mx-auto px-4 py-6 lg:py-8">
+      <div className="grid lg:grid-cols-[1fr,360px] gap-6 lg:gap-8">
         {/* Search Section */}
-        <div>
-          <h1 className="font-display text-3xl font-bold text-surface-900 dark:text-white mb-6">
+        <div className="animate-slide-in-up">
+          <h1 className="text-2xl font-semibold text-surface-900 dark:text-white mb-6">
             Card Scanner
           </h1>
 
@@ -145,7 +134,7 @@ export default function ScannerPage() {
               value={query}
               onChange={(e) => handleInputChange(e.target.value)}
               placeholder="Search by SKU or card name..."
-              className="input pl-12 pr-12 py-3 text-lg"
+              className="input-lg pl-12 pr-12"
               autoComplete="off"
             />
             {query && (
@@ -155,7 +144,7 @@ export default function ScannerPage() {
                   setResults([])
                   inputRef.current?.focus()
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-400 hover:text-primary-500 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -170,11 +159,11 @@ export default function ScannerPage() {
           )}
 
           {!searching && results.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {results.map((card, index) => (
                 <div
                   key={card.id}
-                  className="card p-4 flex items-center gap-4 cursor-pointer hover:border-primary-500 transition-colors animate-fade-in"
+                  className="card p-4 flex items-center gap-4 cursor-pointer hover:border-primary-500 hover:shadow-soft transition-all animate-fade-in"
                   style={{ animationDelay: `${index * 30}ms` }}
                   onClick={() => addToQueue(card)}
                 >
@@ -182,7 +171,7 @@ export default function ScannerPage() {
                     productId={card.id}
                     alt={card.name}
                     size="image_128"
-                    className="w-16 h-20 rounded-lg flex-shrink-0"
+                    className="w-12 h-16 rounded-lg flex-shrink-0"
                   />
                   
                   <div className="flex-1 min-w-0">
@@ -192,13 +181,13 @@ export default function ScannerPage() {
                     <div className="text-sm text-surface-500 font-mono">
                       {card.sku}
                     </div>
-                    <div className="text-sm text-surface-500">
+                    <div className="text-sm text-surface-400">
                       {card.set_name || 'Unknown Set'}
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <div className="font-display font-bold text-lg text-surface-900 dark:text-white">
+                    <div className="font-semibold text-lg text-surface-900 dark:text-white">
                       ${parseFloat(card.price).toFixed(2)}
                     </div>
                     <div className="text-sm text-surface-500">
@@ -206,8 +195,8 @@ export default function ScannerPage() {
                     </div>
                   </div>
 
-                  <button className="btn btn-primary p-2">
-                    <Plus size={20} />
+                  <button className="btn btn-primary p-2.5 rounded-xl">
+                    <Plus size={18} />
                   </button>
                 </div>
               ))}
@@ -223,29 +212,30 @@ export default function ScannerPage() {
         </div>
 
         {/* Queue Section */}
-        <div className="lg:sticky lg:top-20 lg:self-start">
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-xl font-bold text-surface-900 dark:text-white">
+        <div className="lg:sticky lg:top-4 lg:self-start animate-slide-in-right">
+          <div className="card">
+            <div className="p-4 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between">
+              <h2 className="font-semibold text-surface-900 dark:text-white">
                 Queue
               </h2>
-              <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full text-sm font-medium">
-                {totalItems} items
+              <span className="badge badge-primary">
+                {totalItems}
               </span>
             </div>
 
             {queue.length === 0 ? (
-              <div className="text-center py-12 text-surface-500">
+              <div className="p-8 text-center text-surface-500">
                 <Package size={40} className="mx-auto mb-3 opacity-50" />
                 <p className="text-sm">Scan cards to add them to the queue</p>
               </div>
             ) : (
               <>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto mb-6">
-                  {queue.map(({ card, quantity }) => (
+                <div className="max-h-[360px] overflow-y-auto">
+                  {queue.map(({ card, quantity }, index) => (
                     <div
                       key={card.id}
-                      className="flex items-center gap-3 p-3 bg-surface-50 dark:bg-surface-800 rounded-lg"
+                      className="flex items-center gap-3 p-3 border-b border-surface-100 dark:border-surface-800 animate-fade-in"
+                      style={{ animationDelay: `${index * 30}ms` }}
                     >
                       <CardImage
                         productId={card.id}
@@ -263,27 +253,27 @@ export default function ScannerPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center bg-surface-100 dark:bg-surface-800 rounded-lg">
                         <button
                           onClick={() => updateQueueQuantity(card.id, -1)}
-                          className="p-1 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300"
+                          className="p-2 text-surface-500 hover:text-primary-500 transition-colors"
                         >
-                          <Minus size={16} />
+                          <Minus size={14} />
                         </button>
-                        <span className="w-8 text-center font-mono text-sm">
+                        <span className="w-8 text-center font-mono text-sm font-medium text-surface-900 dark:text-white">
                           {quantity}
                         </span>
                         <button
                           onClick={() => updateQueueQuantity(card.id, 1)}
-                          className="p-1 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300"
+                          className="p-2 text-surface-500 hover:text-primary-500 transition-colors"
                         >
-                          <Plus size={16} />
+                          <Plus size={14} />
                         </button>
                       </div>
 
                       <button
                         onClick={() => removeFromQueue(card.id)}
-                        className="p-1 text-surface-400 hover:text-red-500"
+                        className="p-1.5 text-surface-400 hover:text-red-500 transition-colors"
                       >
                         <X size={16} />
                       </button>
@@ -291,7 +281,7 @@ export default function ScannerPage() {
                   ))}
                 </div>
 
-                <div className="space-y-3">
+                <div className="p-4 space-y-2 border-t border-surface-200 dark:border-surface-800">
                   <button
                     onClick={() => processMutation.mutate()}
                     disabled={processMutation.isPending}
@@ -301,7 +291,7 @@ export default function ScannerPage() {
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
-                        <Plus size={20} />
+                        <Plus size={18} />
                         Add {totalItems} to Inventory
                       </>
                     )}
@@ -337,6 +327,3 @@ export default function ScannerPage() {
     </div>
   )
 }
-
-
-
