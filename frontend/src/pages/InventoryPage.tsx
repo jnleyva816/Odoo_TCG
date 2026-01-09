@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight, Loader2, Package, Search, X, Warehouse, Boxes } from 'lucide-react'
-import { getInventory, getSets, Set } from '../api/client'
+import { getInventory, getSets, SetInfo } from '../api/client'
 import CardImage from '../components/CardImage'
 import CardModal from '../components/CardModal'
 import { useAuth } from '../contexts/AuthContext'
@@ -15,7 +15,7 @@ function SetAccordion({
   searchQuery,
   onCardClick 
 }: { 
-  set: Set
+  set: SetInfo
   stockFilter: StockFilter
   searchQuery: string
   onCardClick: (cardId: number) => void
