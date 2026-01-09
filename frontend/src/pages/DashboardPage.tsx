@@ -9,18 +9,28 @@ export default function DashboardPage() {
   const { user, currentWarehouse } = useAuth();
   const { features } = useFeatures();
 
-  const { data: inventoryData, isLoading } = useQuery({
-    queryKey: ['inventory-stats', currentWarehouse?.id],
-    queryFn: () => getInventory({ page: 1, page_size: 100 }),
+  // Get total cards count
+  const { data: totalData, isLoading: totalLoading } = useQuery({
+    queryKey: ['inventory-total', currentWarehouse?.id],
+    queryFn: () => getInventory({ page: 1, page_size: 1 }), // Just need the total
     staleTime: 60000,
   });
 
-  const inStockCount = inventoryData?.items.filter((c) => c.quantity > 0).length || 0;
+  // Get in-stock count separately
+  const { data: inStockData, isLoading: inStockLoading } = useQuery({
+    queryKey: ['inventory-instock', currentWarehouse?.id],
+    queryFn: () => getInventory({ page: 1, page_size: 1, stock: 'in_stock' }),
+    staleTime: 60000,
+  });
+
+  const isLoading = totalLoading || inStockLoading;
+  const totalCount = totalData?.total || 0;
+  const inStockCount = inStockData?.total || 0;
 
   const stats = [
     {
       label: 'Total Cards',
-      value: inventoryData?.total || 0,
+      value: totalCount,
       icon: Package,
       color: 'from-blue-500 to-blue-600',
       bg: 'bg-blue-50 dark:bg-blue-500/10',

@@ -233,11 +233,13 @@ class OdooService:
             domain.append(("categ_id", "=", set_id))
 
         # Map sort fields to Odoo field names
+        # Note: 'write_date' updates when stock is modified (cards added/removed)
         sort_map = {
             "sku": "default_code",
             "name": "name",
             "quantity": "qty_available",
             "price": "list_price",
+            "recent": "write_date",
         }
         order_field = sort_map.get(sort_by, "default_code")
         order = f"{order_field} {sort_order}"
@@ -286,24 +288,37 @@ class OdooService:
                         ]
 
                     total = len(filtered_ids)
-                    offset = (page - 1) * page_size
-                    page_ids = filtered_ids[offset : offset + page_size]
 
-                    if not page_ids:
+                    if not filtered_ids:
                         return [], total
 
-                    # Get product details
+                    # Get ALL product details for sorting (we need all data to sort properly)
                     records = await self.read(
                         "product.product",
-                        page_ids,
-                        ["id", "default_code", "name", "list_price", "categ_id"],
+                        filtered_ids,
+                        ["id", "default_code", "name", "list_price", "categ_id", "write_date"],
                     )
 
                     # Add quantity info
                     for r in records:
                         r["qty_available"] = product_qty.get(r["id"], 0)
 
-                    return records, total
+                    # Sort records in Python since we can't use Odoo's ORDER BY
+                    sort_key_map = {
+                        "default_code": lambda x: (x.get("default_code") or "").lower(),
+                        "name": lambda x: (x.get("name") or "").lower(),
+                        "qty_available": lambda x: x.get("qty_available", 0),
+                        "list_price": lambda x: x.get("list_price", 0),
+                        "write_date": lambda x: x.get("write_date") or "",
+                    }
+                    sort_key = sort_key_map.get(order_field, sort_key_map["default_code"])
+                    records.sort(key=sort_key, reverse=(sort_order == "desc"))
+
+                    # Paginate after sorting
+                    offset = (page - 1) * page_size
+                    page_records = records[offset : offset + page_size]
+
+                    return page_records, total
 
                 else:
                     # No stock filter, get all products and their quantities

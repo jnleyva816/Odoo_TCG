@@ -243,7 +243,7 @@ export async function getInventory(params: {
   search?: string
   set_id?: number
   stock?: 'all' | 'in_stock' | 'out_of_stock'
-  sort_by?: 'sku' | 'name' | 'quantity' | 'price'
+  sort_by?: 'sku' | 'name' | 'quantity' | 'price' | 'recent'
   order?: 'asc' | 'desc'
   page?: number
   page_size?: number

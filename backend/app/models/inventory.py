@@ -22,6 +22,7 @@ class SortField(str, Enum):
     NAME = "name"
     QUANTITY = "quantity"
     PRICE = "price"
+    RECENT = "recent"
 
 
 class SortOrder(str, Enum):
