@@ -179,9 +179,10 @@ class SearchService:
             client = await self._get_client()
 
             # Build filter
+            # Note: We don't filter by warehouse_id in Meilisearch because
+            # card catalog is shared across warehouses - only stock differs.
+            # Stock filtering happens via Odoo's real-time inventory.
             filters = []
-            if warehouse_id:
-                filters.append(f"warehouse_id = {warehouse_id}")
             if set_id:
                 filters.append(f"set_id = {set_id}")
             if stock_filter == "in_stock":
