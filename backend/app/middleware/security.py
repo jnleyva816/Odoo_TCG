@@ -46,6 +46,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             )
 
         # Content Security Policy
+        # Note: 'unsafe-inline' and 'unsafe-eval' are required for React/Vite dev mode
+        # For production, consider implementing nonce-based or hash-based CSP
+        # See: https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
         csp = [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  # React needs inline
@@ -71,7 +74,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limiting middleware using in-memory storage.
     
-    For production, consider using Redis-based rate limiting.
+    **IMPORTANT**: This implementation uses in-memory storage which:
+    - Does NOT persist across restarts
+    - Does NOT scale across multiple instances
+    - Is suitable for single-instance deployments only
+    
+    For production with multiple instances, use:
+    - Redis-based rate limiting (slowapi, fastapi-limiter)
+    - API Gateway rate limiting (nginx, Kong, AWS API Gateway)
+    - CDN rate limiting (CloudFlare, Fastly)
+    
     This implementation provides basic protection against abuse.
     """
 

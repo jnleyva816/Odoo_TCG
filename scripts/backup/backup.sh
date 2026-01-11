@@ -41,8 +41,8 @@ fi
 
 # 2. Backup environment template (without secrets)
 if [ -f "$PROJECT_ROOT/.env" ]; then
-    grep -v "PASSWORD\|SECRET\|KEY" "$PROJECT_ROOT/.env" > "$PROJECT_ROOT/$BACKUP_DIR/env.template" || true
-    log_info "Config template backed up"
+    grep -vE "PASSWORD|SECRET|KEY|TOKEN|API.*KEY" "$PROJECT_ROOT/.env" > "$PROJECT_ROOT/$BACKUP_DIR/env.template" || true
+    log_info "Config template backed up (secrets excluded)"
 else
     log_warn ".env file not found"
 fi

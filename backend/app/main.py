@@ -1,8 +1,9 @@
 """FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
+import json
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -144,15 +145,17 @@ def create_app() -> FastAPI:
         Checks dependencies (Odoo connection).
         Use for Kubernetes readiness probes.
         """
-        from fastapi import status as http_status
-        
         odoo = get_odoo_service()
         odoo_connected = odoo._connected
         
         if not odoo_connected:
+            error_response = {
+                "status": "not_ready",
+                "reason": "Odoo not connected"
+            }
             return Response(
-                content='{"status": "not_ready", "reason": "Odoo not connected"}',
-                status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+                content=json.dumps(error_response),
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 media_type="application/json",
             )
         

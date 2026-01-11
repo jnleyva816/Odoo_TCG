@@ -83,18 +83,26 @@ fi
 # Restore Docker volumes
 if command -v docker &> /dev/null; then
     if [ -f "$PROJECT_ROOT/$BACKUP_DIR/redis-data.tar.gz" ]; then
+        log_warn "Clearing Redis data before restore..."
+        docker run --rm \
+            -v tcg-redis-data:/data \
+            alpine sh -c "cd /data && rm -rf ./*" 2>/dev/null || log_warn "Redis clear failed"
         docker run --rm \
             -v tcg-redis-data:/data \
             -v "$PROJECT_ROOT/$BACKUP_DIR":/backup \
-            alpine sh -c "rm -rf /data/* && tar xzf /backup/redis-data.tar.gz -C /data" 2>/dev/null || log_warn "Redis restore failed"
+            alpine sh -c "tar xzf /backup/redis-data.tar.gz -C /data" 2>/dev/null || log_warn "Redis restore failed"
         log_info "Redis data restored"
     fi
     
     if [ -f "$PROJECT_ROOT/$BACKUP_DIR/meili-data.tar.gz" ]; then
+        log_warn "Clearing Meilisearch data before restore..."
+        docker run --rm \
+            -v tcg-meili-data:/data \
+            alpine sh -c "cd /data && rm -rf ./*" 2>/dev/null || log_warn "Meilisearch clear failed"
         docker run --rm \
             -v tcg-meili-data:/data \
             -v "$PROJECT_ROOT/$BACKUP_DIR":/backup \
-            alpine sh -c "rm -rf /data/* && tar xzf /backup/meili-data.tar.gz -C /data" 2>/dev/null || log_warn "Meilisearch restore failed"
+            alpine sh -c "tar xzf /backup/meili-data.tar.gz -C /data" 2>/dev/null || log_warn "Meilisearch restore failed"
         log_info "Meilisearch data restored"
     fi
 fi
