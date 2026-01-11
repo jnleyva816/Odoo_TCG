@@ -242,8 +242,23 @@ npm run build
 - All API endpoints (except `/api/health` and `/api/features`) require authentication
 - Passwords are hashed with bcrypt
 - JWT tokens expire after 24 hours (configurable)
-- Rate limiting on login attempts (5 failures = 15 min lockout)
+- Rate limiting on all endpoints (60 req/min, 10 req/5s burst)
 - Login attempts are logged for security monitoring
+- OWASP-compliant security headers (HSTS, CSP, X-Frame-Options, etc.)
+- Input validation and sanitization
+- Request ID tracing for debugging
+
+See [SECURITY.md](SECURITY.md) for security policy and vulnerability reporting.
+
+## Documentation
+
+- **[API Documentation](docs/API.md)** - API endpoints, authentication, examples
+- **[Testing Guide](docs/TESTING.md)** - Testing strategies and examples
+- **[Production Deployment](docs/PRODUCTION.md)** - Production best practices
+- **[Backup & Restore](docs/BACKUP.md)** - Backup procedures and disaster recovery
+- **[Migrations](docs/MIGRATIONS.md)** - Database migration guide
+- **[Enhancements](ENHANCEMENTS.md)** - SOTA improvements summary
+- **[Contributing](CONTRIBUTING.md)** - Contribution guidelines
 
 ## Roadmap
 
@@ -254,9 +269,13 @@ npm run build
 - [x] Docker deployment
 - [x] Auto-deploy with webhooks
 - [x] Feature flags
+- [x] Security enhancements (OWASP compliance)
+- [x] Production-ready monitoring
+- [x] Comprehensive documentation
 - [ ] eBay auto-listing
 - [ ] eBay order import
 - [ ] Mobile app
+- [ ] Advanced analytics dashboard
 
 ## License
 
