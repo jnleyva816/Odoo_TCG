@@ -31,12 +31,12 @@ mkdir -p "$PROJECT_ROOT/$BACKUP_DIR"
 
 echo "🔄 Starting backup to: $BACKUP_DIR"
 
-# 1. Backup auth database
+# 1. Backup optional local auth database (if exists)
 if [ -f "$PROJECT_ROOT/backend/auth.db" ]; then
     cp "$PROJECT_ROOT/backend/auth.db" "$PROJECT_ROOT/$BACKUP_DIR/auth.db"
-    log_info "Auth database backed up"
+    log_info "Optional local auth database backed up (login tracking)"
 else
-    log_warn "Auth database not found"
+    log_warn "No local auth.db found - authentication via Odoo (this is normal)"
 fi
 
 # 2. Backup environment template (without secrets)
@@ -78,13 +78,15 @@ System Version: 2.0.0
 Hostname: $(hostname)
 
 Files:
-- Auth DB: $([ -f "$PROJECT_ROOT/$BACKUP_DIR/auth.db" ] && echo "✓" || echo "✗")
+- Optional Local Auth DB: $([ -f "$PROJECT_ROOT/$BACKUP_DIR/auth.db" ] && echo "✓" || echo "✗ (auth via Odoo)")
 - Config Template: $([ -f "$PROJECT_ROOT/$BACKUP_DIR/env.template" ] && echo "✓" || echo "✗")
 - Redis Data: $([ -f "$PROJECT_ROOT/$BACKUP_DIR/redis-data.tar.gz" ] && echo "✓" || echo "✗")
 - Meilisearch Data: $([ -f "$PROJECT_ROOT/$BACKUP_DIR/meili-data.tar.gz" ] && echo "✓" || echo "✗")
 
 Notes:
-- Odoo database must be backed up separately using Odoo's tools
+- PRIMARY DATA: Odoo database must be backed up separately using Odoo's tools
+- Local auth.db (if present) only contains login tracking, not user accounts
+- User authentication is handled by Odoo, not local database
 - Secrets (.env passwords/keys) are NOT backed up for security
 - Restore instructions: See docs/BACKUP.md
 EOF

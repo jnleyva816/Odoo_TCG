@@ -1,180 +1,208 @@
 # Database Migration Guide
 
-This project uses Alembic for database migrations (for SQLite auth database).
+## Overview
 
-## Setup
+This project uses **Odoo ERP as the primary authentication and data storage system**. User authentication is handled directly through Odoo's `res.users` model via XML-RPC, eliminating the need for a separate authentication database.
 
-Alembic is already configured in the project. The auth database uses SQLite and migrations help track schema changes.
+## Current Architecture
 
-## Creating Migrations
+- **Primary Data Store**: Odoo ERP (PostgreSQL)
+  - User accounts and authentication
+  - Product catalog (TCG cards)
+  - Inventory management
+  - All business data
 
-### Auto-generate migration from model changes
+- **Optional Local Storage**: SQLite (if used)
+  - Login attempt tracking (security monitoring)
+  - Session management
+  - These are auxiliary features, not core authentication
 
-```bash
-cd backend
+## No Traditional Migrations Needed
 
-# Create a new migration
-alembic revision --autogenerate -m "Add user role column"
-```
+Since authentication and core data are managed by Odoo, this application **does not require database migrations** in the traditional sense. Schema changes are managed by Odoo's own migration system.
 
-### Create empty migration
+## Odoo Schema Changes
 
-```bash
-alembic revision -m "Custom migration"
-```
+If you need to modify the Odoo data schema (add fields to products, users, etc.):
 
-## Running Migrations
+### 1. Odoo Module Development
 
-### Upgrade to latest
-
-```bash
-alembic upgrade head
-```
-
-### Upgrade by one version
-
-```bash
-alembic upgrade +1
-```
-
-### Downgrade by one version
-
-```bash
-alembic downgrade -1
-```
-
-### Show current version
-
-```bash
-alembic current
-```
-
-### Show migration history
-
-```bash
-alembic history --verbose
-```
-
-## Migration Files
-
-Migrations are stored in `backend/alembic/versions/`.
-
-Example migration:
+The proper way to modify Odoo schema is through Odoo modules:
 
 ```python
-"""Add user warehouse_id
+# In your custom Odoo module
+from odoo import models, fields
 
-Revision ID: abc123
-Revises: def456
-Create Date: 2024-01-11 00:00:00.000000
+class ResUsers(models.Model):
+    _inherit = 'res.users'
+    
+    # Add custom field
+    preferred_warehouse_id = fields.Many2one(
+        'stock.warehouse',
+        string='Preferred Warehouse'
+    )
+```
 
-"""
-from alembic import op
-import sqlalchemy as sa
+### 2. Odoo Database Upgrades
 
-# revision identifiers, used by Alembic.
-revision = 'abc123'
-down_revision = 'def456'
-branch_labels = None
-depends_on = None
+```bash
+# Upgrade specific module
+odoo-bin -u module_name -d database_name
 
-def upgrade():
-    """Upgrade database."""
-    op.add_column('users', sa.Column('warehouse_id', sa.Integer(), nullable=True))
+# Or via Odoo UI
+# Apps → Update Apps List → Upgrade Module
+```
 
-def downgrade():
-    """Rollback changes."""
-    op.drop_column('users', 'warehouse_id')
+### 3. XML-RPC Schema Access
+
+For read-only schema inspection:
+
+```python
+import xmlrpc.client
+
+# Connect to Odoo
+common = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/common')
+models = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/object')
+
+# Get field definitions
+fields = models.execute_kw(
+    db, uid, password,
+    'res.users', 'fields_get',
+    [], {'attributes': ['string', 'type', 'required']}
+)
+```
+
+## Data Migration Scripts
+
+For bulk data changes or imports, use Python scripts with the Odoo API:
+
+```python
+# scripts/migrate_data.py
+import xmlrpc.client
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+# Connect
+url = os.getenv('ODOO_URL')
+db = os.getenv('ODOO_DB')
+username = os.getenv('ODOO_USER')
+password = os.getenv('ODOO_PASSWORD')
+
+common = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/common')
+uid = common.authenticate(db, username, password, {})
+
+models = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/object')
+
+# Example: Update all products
+product_ids = models.execute_kw(
+    db, uid, password,
+    'product.product', 'search',
+    [[]]  # Search all
+)
+
+for product_id in product_ids:
+    models.execute_kw(
+        db, uid, password,
+        'product.product', 'write',
+        [[product_id], {'some_field': 'new_value'}]
+    )
+
+print(f"Updated {len(product_ids)} products")
 ```
 
 ## Best Practices
 
-### Before Creating Migrations
+### Schema Changes
 
-1. **Test locally** - Always test migrations on local database first
-2. **Review SQL** - Check generated SQL with `alembic upgrade head --sql`
-3. **Backup data** - Always backup database before migrations
+1. **Always backup Odoo database** before schema changes
+2. **Test in staging environment** first
+3. **Use Odoo modules** for permanent schema changes
+4. **Document custom fields** in module documentation
+5. **Version control Odoo modules** in separate repository
 
-### Migration Guidelines
+### Data Migrations
 
-1. **One change per migration** - Easier to rollback
-2. **Test rollback** - Ensure `downgrade()` works
-3. **Add data migrations carefully** - Consider large datasets
-4. **Use transactions** - Most migrations should be transactional
+1. **Create scripts in `scripts/migrations/`** directory
+2. **Test with small dataset** first
+3. **Use transactions** when possible
+4. **Log all changes** for audit trail
+5. **Keep rollback scripts** ready
 
 ### Production Deployment
 
 ```bash
-# 1. Backup database
-cp auth.db auth.db.backup
+# 1. Backup Odoo database
+pg_dump -h localhost -U odoo database_name > backup.sql
 
-# 2. Test migration with SQL output
-alembic upgrade head --sql > migration.sql
-cat migration.sql  # Review changes
+# 2. Test changes in staging
+# Apply Odoo module upgrade or run migration script
 
-# 3. Run migration
+# 3. Verify data integrity
+# Run validation queries
+
+# 4. Apply to production
+# Deploy Odoo module or run migration script
+
+# 5. Monitor for issues
+# Check Odoo logs: /var/log/odoo/odoo.log
+```
+
+## Local SQLite (Optional)
+
+If you're using local SQLite for auxiliary features (login attempts, sessions), you can set up Alembic:
+
+```bash
+# Install Alembic (not included by default)
+pip install alembic
+
+# Initialize Alembic
+cd backend
+alembic init alembic
+
+# Configure alembic.ini
+# sqlalchemy.url = sqlite:///./auth.db
+
+# Create migration
+alembic revision --autogenerate -m "description"
+
+# Apply migration
 alembic upgrade head
-
-# 4. Verify
-alembic current
 ```
 
-## Configuration
-
-Alembic configuration in `backend/alembic.ini`:
-
-```ini
-[alembic]
-script_location = alembic
-sqlalchemy.url = sqlite:///./auth.db
-
-[loggers]
-keys = root,sqlalchemy,alembic
-
-[handlers]
-keys = console
-
-[formatters]
-keys = generic
-```
+**Note**: This is optional and only needed if you're adding custom SQLite tables for application-specific features.
 
 ## Troubleshooting
 
-### "Can't locate revision abc123"
-
-Reset migration history:
-```bash
-alembic stamp head
-```
-
-### "Target database is not up to date"
-
-Check current version:
-```bash
-alembic current
-alembic history
-```
-
-### Rollback failed migration
+### Odoo Connection Issues
 
 ```bash
-# Manual rollback
-alembic downgrade -1
-
-# Or restore from backup
-cp auth.db.backup auth.db
+# Test Odoo connectivity
+python3 << EOF
+import xmlrpc.client
+common = xmlrpc.client.ServerProxy('http://odoo-server:8069/xmlrpc/2/common')
+print(common.version())
+EOF
 ```
 
-## Future: Odoo Data Migrations
+### Data Inconsistencies
 
-Odoo ERP has its own migration system. This Alembic setup is only for the local SQLite auth database.
+```bash
+# Check Odoo data directly
+psql -h localhost -U odoo -d database_name -c "SELECT * FROM res_users LIMIT 5;"
+```
 
-For Odoo data:
-- Use Odoo's built-in migration framework
-- Or create custom migration scripts using Odoo XML-RPC API
+### Migration Failures
+
+- **Always have database backup** before attempting changes
+- Use Odoo's built-in backup/restore functionality
+- Test migrations in isolated environment first
 
 ## Resources
 
-- [Alembic Documentation](https://alembic.sqlalchemy.org/)
-- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
-- [Database Migration Best Practices](https://www.prisma.io/dataguide/types/relational/migration-strategies)
+- [Odoo Development Documentation](https://www.odoo.com/documentation/16.0/developer.html)
+- [Odoo ORM API](https://www.odoo.com/documentation/16.0/developer/reference/backend/orm.html)
+- [Odoo External API (XML-RPC)](https://www.odoo.com/documentation/16.0/developer/reference/external_api.html)
+- [PostgreSQL Backup](https://www.postgresql.org/docs/current/backup.html)
+- [Alembic Documentation](https://alembic.sqlalchemy.org/) (for optional SQLite migrations)

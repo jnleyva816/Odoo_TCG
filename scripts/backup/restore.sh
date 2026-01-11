@@ -70,14 +70,16 @@ mkdir -p "$SAFETY_BACKUP"
 if [ -f "$PROJECT_ROOT/backend/auth.db" ]; then
     cp "$PROJECT_ROOT/backend/auth.db" "$SAFETY_BACKUP/auth.db"
     log_info "Current state backed up to: $SAFETY_BACKUP"
+else
+    log_info "No local auth.db to backup (authentication via Odoo)"
 fi
 
-# Restore auth database
+# Restore optional auth database (if in backup)
 if [ -f "$PROJECT_ROOT/$BACKUP_DIR/auth.db" ]; then
     cp "$PROJECT_ROOT/$BACKUP_DIR/auth.db" "$PROJECT_ROOT/backend/auth.db"
-    log_info "Auth database restored"
+    log_info "Optional local auth database restored (login tracking)"
 else
-    log_warn "Auth database not found in backup"
+    log_warn "No auth database in backup - system uses Odoo authentication"
 fi
 
 # Restore Docker volumes

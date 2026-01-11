@@ -4,25 +4,30 @@ Comprehensive guide for backing up and restoring the TCG Inventory System.
 
 ## What to Backup
 
-### 1. Auth Database (SQLite)
-- **Location**: `backend/auth.db`
-- **Contains**: User accounts, login history, rate limiting data
-- **Critical**: Yes - contains authentication data
+### 1. Odoo Database (Primary - CRITICAL)
+- **Location**: Odoo server (PostgreSQL)
+- **Contains**: 
+  - User accounts and authentication
+  - Product catalog (TCG cards)
+  - Inventory data
+  - All business data
+- **Critical**: Yes - main data store
+- **Note**: Use Odoo's backup tools (see below)
 
-### 2. Environment Configuration
+### 2. Optional Local Database (SQLite)
+- **Location**: `backend/auth.db` (if exists)
+- **Contains**: Login attempt tracking, session data (auxiliary features only)
+- **Critical**: No - Odoo handles authentication
+- **Note**: This is optional and only used for security monitoring
+
+### 3. Environment Configuration
 - **Location**: `.env` files
 - **Contains**: Secrets, API keys, configuration
 - **Critical**: Yes - required to start system
 
-### 3. Docker Volumes (if using Docker)
+### 4. Docker Volumes (if using Docker)
 - **redis-data**: Cache data (not critical, regenerates)
 - **meili-data**: Search index (not critical, can reindex)
-
-### 4. Odoo Database
-- **Location**: Odoo server
-- **Contains**: All product and inventory data
-- **Critical**: Yes - main data store
-- **Note**: Use Odoo's backup tools
 
 ## Backup Scripts
 
@@ -37,10 +42,12 @@ mkdir -p "$BACKUP_DIR"
 
 echo "🔄 Creating backup..."
 
-# 1. Backup auth database
+# 1. Backup optional auth database (if exists)
 if [ -f "backend/auth.db" ]; then
     cp backend/auth.db "$BACKUP_DIR/auth.db"
-    echo "✅ Auth database backed up"
+    echo "✅ Local auth database backed up (optional - used for login tracking)"
+else
+    echo "ℹ️  No local auth.db found (authentication via Odoo)"
 fi
 
 # 2. Backup environment config (without secrets)
