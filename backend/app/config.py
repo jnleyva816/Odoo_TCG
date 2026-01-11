@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     admin_email: str = ""
     admin_password: str = ""
 
+    # Logging
+    log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    log_format: str = "colored"  # colored or json
+
     # Email notifications (optional)
     smtp_host: str = ""
     smtp_port: int = 587

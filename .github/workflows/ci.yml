@@ -45,6 +45,12 @@ jobs:
         run: mypy app/ --ignore-missing-imports
         continue-on-error: true  # Don't fail on type errors for now
 
+      - name: Security scan with pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit --desc || true  # Don't fail build yet
+        continue-on-error: true
+
       - name: Run tests
         run: pip install rich -q && pytest ../tests/ -v --tb=short
         env:
@@ -83,6 +89,10 @@ jobs:
 
       - name: Lint
         run: npm run lint || true  # Don't fail on lint for now
+
+      - name: Security audit
+        run: npm audit --production || true  # Don't fail build yet
+        continue-on-error: true
 
   # ==========================================================
   # Build & Push Docker Images
