@@ -14,8 +14,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
-# Add the src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add the src directory to path (go up two levels from scripts/data/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'src'))
 
 from dotenv import load_dotenv
 from tcg_automation.odoo_client import OdooClient

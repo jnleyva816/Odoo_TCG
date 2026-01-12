@@ -8,11 +8,13 @@ A full-stack Pokemon TCG card inventory management system with Odoo ERP integrat
 
 ## Features
 
-- 🔐 **Secure Authentication** - JWT-based login with rate limiting
+- 🔐 **Odoo Authentication** - Login with your Odoo credentials, JWT tokens for API
 - 📦 **Inventory Management** - Track card quantities, prices, and stock levels
+- 🔍 **Instant Search** - Meilisearch-powered typo-tolerant card search
 - 🔍 **Barcode Scanner** - Scan cards to quickly adjust inventory
 - 🏷️ **Label Printing** - Generate and print labels for Brother QL printers
-- 🔄 **Odoo Integration** - Sync with Odoo ERP for inventory and product management
+- 🔄 **Odoo Integration** - Full sync with Odoo ERP for inventory and products
+- ⚡ **Redis Caching** - Fast response times with Redis-backed caching & rate limiting
 - 🚀 **Auto-Deploy** - Push to GitHub and auto-deploy to your server
 - 🎛️ **Feature Flags** - Enable/disable features via environment variables
 
@@ -22,8 +24,8 @@ A full-stack Pokemon TCG card inventory management system with Odoo ERP integrat
 
 - Python 3.11+
 - Node.js 18+
-- Docker & Docker Compose
-- Odoo 16+ instance
+- Docker & Docker Compose (includes Redis & Meilisearch)
+- Odoo 16+ instance (for data storage and authentication)
 - (Optional) Brother QL label printer
 
 ### Local Development
@@ -76,22 +78,25 @@ Access the app at http://localhost:3000
 Create a `.env` file based on `env.example`:
 
 ```env
-# Odoo Connection
+# Odoo Connection (users login with their Odoo credentials)
 ODOO_URL=http://your-odoo-server:8069
 ODOO_DB=your-database
-ODOO_USER=your-email@example.com
-ODOO_PASSWORD=your-password
 
-# Authentication (REQUIRED)
-JWT_SECRET_KEY=generate-with-openssl-rand-hex-32
-ADMIN_USERNAME=admin
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD="your-secure-password"
+# JWT Token Signing (REQUIRED - generate with: openssl rand -hex 32)
+JWT_SECRET_KEY=your-secret-key-here
+JWT_EXPIRE_MINUTES=1440  # 24 hours
+
+# Redis (caching & rate limiting)
+REDIS_URL=redis://localhost:6379/0
+
+# Meilisearch (instant search)
+MEILI_URL=http://localhost:7700
+MEILI_MASTER_KEY=your-meili-key
 
 # Feature Flags
-FEATURE_SETS_PAGE=false
 FEATURE_SCANNER_PAGE=true
 FEATURE_INVENTORY_PAGE=true
+FEATURE_SETS_PAGE=false
 FEATURE_LABEL_PRINTING=true
 
 # Label Printer (Optional)
@@ -101,6 +106,8 @@ PRINTER_PORT=9100
 PRINTER_MODEL=QL-800
 PRINTER_LABEL_SIZE=29
 ```
+
+> **Note:** Users log in with their existing **Odoo credentials**. No separate user management needed!
 
 ### Feature Flags
 
@@ -118,16 +125,26 @@ Control which features are available:
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   React App     │────▶│  FastAPI Backend │────▶│   Odoo ERP      │
-│   (Frontend)    │     │   (REST API)     │     │   (Database)    │
+│   (Frontend)    │     │   (REST API)     │     │ (Data + Auth)   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │
-        │                       │
-        ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐
-│   Auth Context  │     │  SQLite (Auth)  │
-│   (JWT Tokens)  │     │  (Users/Login)  │
-└─────────────────┘     └─────────────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              │                │                │
+              ▼                ▼                ▼
+       ┌────────────┐   ┌────────────┐   ┌────────────┐
+       │   Redis    │   │ Meilisearch│   │   Celery   │
+       │  (Cache &  │   │  (Search)  │   │  (Tasks)   │
+       │Rate Limit) │   │            │   │            │
+       └────────────┘   └────────────┘   └────────────┘
 ```
+
+### How Authentication Works
+
+1. User enters **Odoo credentials** (email/password)
+2. Backend validates credentials against **Odoo XML-RPC**
+3. On success, backend issues a **JWT token** (24h expiry)
+4. Frontend stores token and sends it with all API requests
+5. No separate user database - **Odoo is the source of truth**
 
 ## Project Structure
 
@@ -136,22 +153,27 @@ Odoo_TCG/
 ├── backend/                 # FastAPI backend
 │   └── app/
 │       ├── auth/           # JWT authentication
+│       ├── middleware/     # Security, rate limiting, tracing
 │       ├── routers/        # API endpoints
 │       ├── services/       # Business logic
-│       └── config.py       # Configuration
+│       └── utils/          # Validators, logging
 ├── frontend/               # React frontend
 │   └── src/
 │       ├── contexts/       # Auth & Features contexts
 │       ├── pages/          # Page components
 │       └── components/     # Shared components
 ├── docker/                 # Docker configuration
-│   ├── Dockerfile.backend
-│   ├── Dockerfile.frontend
-│   └── docker-compose.yml
 ├── scripts/                # Utility scripts
-│   └── deploy-webhook.py   # Auto-deploy webhook
+│   ├── backup/            # Backup & restore
+│   ├── data/              # CSV import, image fixes
+│   ├── deploy/            # Auto-deploy webhook
+│   ├── maintenance/       # Price sync, warehouse setup
+│   └── server/            # Dev server startup
 ├── src/tcg_automation/     # CLI tools
 └── docs/                   # Documentation
+    ├── guides/            # Setup, deployment, operations
+    ├── reference/         # API, testing docs
+    └── archive/           # Historical reports
 ```
 
 ## API Documentation
@@ -164,14 +186,15 @@ When running, access interactive API docs at:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/auth/login` | POST | Login and get JWT token |
+| `/api/auth/login` | POST | Login with Odoo credentials, get JWT |
 | `/api/auth/me` | GET | Get current user info |
-| `/api/cards/search` | GET | Search cards by name/SKU |
+| `/api/cards/search` | GET | Search cards (Meilisearch-powered) |
 | `/api/inventory/` | GET | Get inventory with filters |
 | `/api/inventory/adjust` | POST | Adjust stock quantity |
 | `/api/labels/print/{id}` | POST | Print label for product |
-| `/api/features` | GET | Get enabled features |
-| `/api/health` | GET | Health check |
+| `/api/features` | GET | Get enabled feature flags |
+| `/api/health` | GET | Liveness check |
+| `/api/health/ready` | GET | Readiness check (verifies Odoo connection) |
 
 ## CLI Commands
 
@@ -239,33 +262,37 @@ npm run build
 
 ## Security
 
-- All API endpoints (except `/api/health` and `/api/features`) require authentication
-- Passwords are hashed with bcrypt
-- JWT tokens expire after 24 hours (configurable)
-- Rate limiting on all endpoints (60 req/min, 10 req/5s burst)
-- Login attempts are logged for security monitoring
-- OWASP-compliant security headers (HSTS, CSP, X-Frame-Options, etc.)
-- Input validation and sanitization
-- Request ID tracing for debugging
+- **Odoo-based authentication** - Users login with existing Odoo credentials
+- **JWT tokens** expire after 24 hours (configurable)
+- **Redis-backed rate limiting** - 60 req/min, 10 req/5s burst (distributed)
+- **OWASP-compliant security headers** - HSTS, CSP, X-Frame-Options, etc.
+- **Input validation and sanitization** - XSS and injection prevention
+- **Request ID tracing** - End-to-end request tracking for debugging
+- **Audit logging** - Login attempts and security events logged
 
 See [SECURITY.md](SECURITY.md) for security policy and vulnerability reporting.
 
 ## Documentation
 
-- **[API Documentation](docs/API.md)** - API endpoints, authentication, examples
-- **[Testing Guide](docs/TESTING.md)** - Testing strategies and examples
-- **[Production Deployment](docs/PRODUCTION.md)** - Production best practices
-- **[Backup & Restore](docs/BACKUP.md)** - Backup procedures and disaster recovery
-- **[Migrations](docs/MIGRATIONS.md)** - Database migration guide
-- **[Enhancements](ENHANCEMENTS.md)** - SOTA improvements summary
-- **[Contributing](CONTRIBUTING.md)** - Contribution guidelines
+See [docs/README.md](docs/README.md) for the full documentation index.
+
+### Quick Links
+
+- **[Setup Guide](docs/guides/SETUP.md)** - Getting started
+- **[API Reference](docs/reference/API.md)** - Endpoints and examples
+- **[Production Guide](docs/guides/PRODUCTION.md)** - Deployment best practices
+- **[Backup & Restore](docs/guides/BACKUP.md)** - Disaster recovery
+- **[Testing Guide](docs/reference/TESTING.md)** - Testing strategies
+- **[Contributing](CONTRIBUTING.md)** - How to contribute
 
 ## Roadmap
 
 - [x] Card import from tcgcsv.com
 - [x] Price sync automation
 - [x] Label generation & scanner
-- [x] JWT authentication
+- [x] Odoo-based authentication (login with Odoo credentials)
+- [x] Meilisearch instant search
+- [x] Redis caching & distributed rate limiting
 - [x] Docker deployment
 - [x] Auto-deploy with webhooks
 - [x] Feature flags
@@ -274,7 +301,7 @@ See [SECURITY.md](SECURITY.md) for security policy and vulnerability reporting.
 - [x] Comprehensive documentation
 - [ ] eBay auto-listing
 - [ ] eBay order import
-- [ ] Mobile app
+- [ ] Mobile app (PWA support added)
 - [ ] Advanced analytics dashboard
 
 ## License

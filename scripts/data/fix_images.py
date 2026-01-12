@@ -22,8 +22,9 @@ from pathlib import Path
 
 import requests
 
-# Add the src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add the src directory to path (go up two levels from scripts/data/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'src'))
 
 from dotenv import load_dotenv
 from tcg_automation.odoo_client import OdooClient
@@ -42,8 +43,8 @@ def debug(msg: str):
 session = requests.Session()
 session.headers.update({'User-Agent': 'Mozilla/5.0 TCG-Importer/1.0'})
 
-# CSV directory
-CSV_DIR = Path(__file__).parent / "src" / "tcg_automation" / "csvs"
+# CSV directory (relative to project root)
+CSV_DIR = Path(PROJECT_ROOT) / "src" / "tcg_automation" / "csvs"
 
 
 def download_image(url: str, timeout: int = 15) -> str | None:
