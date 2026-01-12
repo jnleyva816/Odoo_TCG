@@ -385,10 +385,30 @@ class OdooService:
         return records, total
 
     async def get_sets(self) -> list[dict[str, Any]]:
-        """Get all product categories (sets)."""
+        """Get all Pokemon card sets (categories under 'Pokemon' parent)."""
+        # First find the Pokemon parent category
+        pokemon_cats = await self.search_read(
+            "product.category",
+            [("name", "=", "Pokemon")],
+            ["id"],
+            limit=1,
+        )
+
+        if not pokemon_cats:
+            # Fallback: return all categories if no Pokemon parent found
+            return await self.search_read(
+                "product.category",
+                [],
+                ["id", "name", "product_count"],
+                order="name",
+            )
+
+        parent_id = pokemon_cats[0]["id"]
+
+        # Return only categories that are children of Pokemon
         return await self.search_read(
             "product.category",
-            [],
+            [("parent_id", "=", parent_id)],
             ["id", "name", "product_count"],
             order="name",
         )
