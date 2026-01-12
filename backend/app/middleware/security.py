@@ -11,7 +11,7 @@ from starlette.types import ASGIApp
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses.
-    
+
     Implements OWASP recommended security headers:
     - X-Content-Type-Options: Prevent MIME-type sniffing
     - X-Frame-Options: Prevent clickjacking attacks
@@ -41,9 +41,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # HSTS - enforce HTTPS (only in production)
         if not self.debug:
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains"
-            )
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         # Content Security Policy
         # Note: 'unsafe-inline' and 'unsafe-eval' are required for React/Vite dev mode
@@ -73,17 +71,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limiting middleware using in-memory storage.
-    
+
     **IMPORTANT**: This implementation uses in-memory storage which:
     - Does NOT persist across restarts
     - Does NOT scale across multiple instances
     - Is suitable for single-instance deployments only
-    
+
     For production with multiple instances, use:
     - Redis-based rate limiting (slowapi, fastapi-limiter)
     - API Gateway rate limiting (nginx, Kong, AWS API Gateway)
     - CDN rate limiting (CloudFlare, Fastly)
-    
+
     This implementation provides basic protection against abuse.
     """
 
@@ -107,12 +105,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return forwarded.split(",")[0].strip()
-        
+
         # Check X-Real-IP
         real_ip = request.headers.get("X-Real-IP")
         if real_ip:
             return real_ip
-        
+
         # Fall back to client host
         return request.client.host if request.client else "unknown"
 
@@ -127,7 +125,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self._requests[ip] = [ts for ts in self._requests[ip] if ts > cutoff]
             if not self._requests[ip]:
                 del self._requests[ip]
-        
+
         self._last_cleanup = now
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -138,13 +136,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         client_ip = self._get_client_ip(request)
         now = time.time()
-        
+
         # Cleanup old records periodically
         self._cleanup_old_requests()
 
         # Get recent requests for this IP
         recent_requests = self._requests[client_ip]
-        
+
         # Remove requests older than 1 minute
         cutoff = now - 60
         recent_requests = [ts for ts in recent_requests if ts > cutoff]

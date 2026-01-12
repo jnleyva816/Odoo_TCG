@@ -1,7 +1,7 @@
 """FastAPI application entry point."""
 
-from contextlib import asynccontextmanager
 import json
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,10 +75,10 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware, debug=settings.debug)
     app.add_middleware(RateLimitMiddleware, requests_per_minute=60, burst_size=10)
     app.add_middleware(RequestIDMiddleware)
-    
+
     # Compression middleware (gzip responses > 500 bytes)
     app.add_middleware(GZipMiddleware, minimum_size=500)
-    
+
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -128,7 +128,7 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     async def health_check():
         """Health check endpoint - liveness probe.
-        
+
         Returns 200 if application is running.
         Use for container liveness checks.
         """
@@ -136,29 +136,26 @@ def create_app() -> FastAPI:
             "status": "healthy",
             "version": "2.0.0",
         }
-    
+
     @app.get("/api/health/ready")
     async def readiness_check():
         """Readiness check endpoint.
-        
+
         Returns 200 if application is ready to serve traffic.
         Checks dependencies (Odoo connection).
         Use for Kubernetes readiness probes.
         """
         odoo = get_odoo_service()
         odoo_connected = odoo._connected
-        
+
         if not odoo_connected:
-            error_response = {
-                "status": "not_ready",
-                "reason": "Odoo not connected"
-            }
+            error_response = {"status": "not_ready", "reason": "Odoo not connected"}
             return Response(
                 content=json.dumps(error_response),
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 media_type="application/json",
             )
-        
+
         return {
             "status": "ready",
             "version": "2.0.0",

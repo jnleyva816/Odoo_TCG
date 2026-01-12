@@ -9,7 +9,7 @@ from typing import Any
 
 class JSONFormatter(logging.Formatter):
     """Format logs as JSON for structured logging.
-    
+
     This enables:
     - Easy parsing by log aggregation systems (ELK, Splunk, etc.)
     - Better searching and filtering
@@ -83,7 +83,7 @@ class ColoredFormatter(logging.Formatter):
 
 def setup_logging(debug: bool = False, json_output: bool = False) -> None:
     """Configure application logging.
-    
+
     Args:
         debug: Enable debug level logging
         json_output: Output logs as JSON (for production)
@@ -118,7 +118,7 @@ def setup_logging(debug: bool = False, json_output: bool = False) -> None:
 
 def get_logger(name: str) -> logging.Logger:
     """Get a logger instance.
-    
+
     Usage:
         logger = get_logger(__name__)
         logger.info("Processing request", extra={

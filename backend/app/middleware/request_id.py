@@ -10,13 +10,13 @@ from starlette.types import ASGIApp
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Add unique request ID to each request for tracing and debugging.
-    
+
     The request ID is:
     1. Generated for each request if not provided
     2. Attached to the request state
     3. Returned in the response headers
     4. Available for logging throughout the request lifecycle
-    
+
     This enables:
     - End-to-end request tracing
     - Correlation of logs across services
@@ -48,7 +48,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 def get_request_id(request: Request) -> str:
     """Get request ID from request state.
-    
+
     Usage in route handlers:
         @app.get("/example")
         async def example(request: Request):

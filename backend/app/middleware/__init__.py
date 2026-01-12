@@ -1,8 +1,8 @@
 """Middleware components for security and monitoring."""
 
-from .security import SecurityHeadersMiddleware, RateLimitMiddleware
-from .request_id import RequestIDMiddleware
 from .compression import CompressionMiddleware
+from .request_id import RequestIDMiddleware
+from .security import RateLimitMiddleware, SecurityHeadersMiddleware
 
 __all__ = [
     "SecurityHeadersMiddleware",
