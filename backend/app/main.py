@@ -73,7 +73,12 @@ def create_app() -> FastAPI:
 
     # Security middleware (applied in reverse order)
     app.add_middleware(SecurityHeadersMiddleware, debug=settings.debug)
-    app.add_middleware(RateLimitMiddleware, requests_per_minute=60, burst_size=10)
+    app.add_middleware(
+        RateLimitMiddleware,
+        redis_url=settings.redis_url,
+        requests_per_minute=60,
+        burst_size=10,
+    )
     app.add_middleware(RequestIDMiddleware)
 
     # Compression middleware (gzip responses > 500 bytes)

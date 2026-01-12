@@ -8,6 +8,14 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+# Redis import with fallback
+try:
+    import redis.asyncio as redis
+
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses.
@@ -70,34 +78,57 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Rate limiting middleware using in-memory storage.
+    """Rate limiting middleware with Redis backend.
 
-    **IMPORTANT**: This implementation uses in-memory storage which:
-    - Does NOT persist across restarts
-    - Does NOT scale across multiple instances
-    - Is suitable for single-instance deployments only
+    This implementation uses Redis for distributed rate limiting:
+    - Persists across server restarts
+    - Scales across multiple workers/instances
+    - Production-ready
 
-    For production with multiple instances, use:
-    - Redis-based rate limiting (slowapi, fastapi-limiter)
-    - API Gateway rate limiting (nginx, Kong, AWS API Gateway)
-    - CDN rate limiting (CloudFlare, Fastly)
-
-    This implementation provides basic protection against abuse.
+    Falls back to in-memory storage if Redis is unavailable.
     """
 
     def __init__(
         self,
         app: ASGIApp,
+        redis_url: str = "redis://localhost:6379/0",
         requests_per_minute: int = 60,
         burst_size: int = 10,
     ):
         super().__init__(app)
+        self.redis_url = redis_url
         self.requests_per_minute = requests_per_minute
         self.burst_size = burst_size
-        # Track requests: {client_ip: [timestamp, timestamp, ...]}
+        self._redis_client: "redis.Redis | None" = None
+        self._redis_available = False
+        self._redis_checked = False
+
+        # Fallback in-memory storage (used if Redis unavailable)
         self._requests: dict[str, list[float]] = defaultdict(list)
-        self._cleanup_interval = 60  # Clean old entries every 60s
+        self._cleanup_interval = 60
         self._last_cleanup = time.time()
+
+    async def _get_redis(self) -> "redis.Redis | None":
+        """Get Redis client, lazily initialized."""
+        if not REDIS_AVAILABLE:
+            return None
+
+        if self._redis_client is None and not self._redis_checked:
+            self._redis_checked = True
+            try:
+                self._redis_client = redis.from_url(
+                    self.redis_url,
+                    encoding="utf-8",
+                    decode_responses=True,
+                )
+                # Test connection
+                await self._redis_client.ping()
+                self._redis_available = True
+            except Exception:
+                self._redis_client = None
+                self._redis_available = False
+
+        return self._redis_client if self._redis_available else None
 
     def _get_client_ip(self, request: Request) -> str:
         """Extract client IP from request."""
@@ -115,12 +146,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return request.client.host if request.client else "unknown"
 
     def _cleanup_old_requests(self):
-        """Remove expired request records to prevent memory leak."""
+        """Remove expired request records from in-memory storage."""
         now = time.time()
         if now - self._last_cleanup < self._cleanup_interval:
             return
 
-        cutoff = now - 60  # Remove records older than 1 minute
+        cutoff = now - 60
         for ip in list(self._requests.keys()):
             self._requests[ip] = [ts for ts in self._requests[ip] if ts > cutoff]
             if not self._requests[ip]:
@@ -128,28 +159,96 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         self._last_cleanup = now
 
+    async def _check_rate_limit_redis(
+        self, client_ip: str, redis_client: "redis.Redis"
+    ) -> tuple[bool, int, bool, int]:
+        """Check rate limit using Redis.
+
+        Returns: (rate_limited, remaining, burst_limited, burst_remaining)
+        """
+        minute_key = f"ratelimit:{client_ip}:minute"
+        burst_key = f"ratelimit:{client_ip}:burst"
+
+        try:
+            # Use Redis pipeline for atomic operations
+            pipe = redis_client.pipeline()
+
+            # Increment minute counter (expires after 60s)
+            pipe.incr(minute_key)
+            pipe.expire(minute_key, 60)
+
+            # Increment burst counter (expires after 5s)
+            pipe.incr(burst_key)
+            pipe.expire(burst_key, 5)
+
+            results = await pipe.execute()
+            minute_count = results[0]
+            burst_count = results[2]
+
+            remaining = max(0, self.requests_per_minute - minute_count)
+            burst_remaining = max(0, self.burst_size - burst_count)
+
+            rate_limited = minute_count > self.requests_per_minute
+            burst_limited = burst_count > self.burst_size
+
+            return rate_limited, remaining, burst_limited, burst_remaining
+
+        except Exception:
+            # Redis error - don't block request, just skip rate limiting
+            return False, self.requests_per_minute, False, self.burst_size
+
+    def _check_rate_limit_memory(self, client_ip: str) -> tuple[bool, int, bool, int]:
+        """Check rate limit using in-memory storage (fallback).
+
+        Returns: (rate_limited, remaining, burst_limited, burst_remaining)
+        """
+        now = time.time()
+        self._cleanup_old_requests()
+
+        recent_requests = self._requests[client_ip]
+        cutoff = now - 60
+        recent_requests = [ts for ts in recent_requests if ts > cutoff]
+        self._requests[client_ip] = recent_requests
+
+        # Check minute rate limit
+        minute_count = len(recent_requests)
+        remaining = max(0, self.requests_per_minute - minute_count)
+        rate_limited = minute_count >= self.requests_per_minute
+
+        # Check burst limit (last 5 seconds)
+        burst_cutoff = now - 5
+        burst_requests = [ts for ts in recent_requests if ts > burst_cutoff]
+        burst_count = len(burst_requests)
+        burst_remaining = max(0, self.burst_size - burst_count)
+        burst_limited = burst_count >= self.burst_size
+
+        # Record this request
+        self._requests[client_ip].append(now)
+
+        return rate_limited, remaining, burst_limited, burst_remaining
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Check rate limit and process request."""
-        # Skip rate limiting for health checks
-        if request.url.path in ["/api/health", "/api/features"]:
+        # Skip rate limiting for health checks and readiness probes
+        if request.url.path in ["/api/health", "/api/health/ready", "/api/features"]:
             return await call_next(request)
 
         client_ip = self._get_client_ip(request)
         now = time.time()
 
-        # Cleanup old records periodically
-        self._cleanup_old_requests()
+        # Try Redis first, fallback to in-memory
+        redis_client = await self._get_redis()
+        if redis_client:
+            rate_limited, remaining, burst_limited, burst_remaining = (
+                await self._check_rate_limit_redis(client_ip, redis_client)
+            )
+        else:
+            rate_limited, remaining, burst_limited, burst_remaining = (
+                self._check_rate_limit_memory(client_ip)
+            )
 
-        # Get recent requests for this IP
-        recent_requests = self._requests[client_ip]
-
-        # Remove requests older than 1 minute
-        cutoff = now - 60
-        recent_requests = [ts for ts in recent_requests if ts > cutoff]
-        self._requests[client_ip] = recent_requests
-
-        # Check rate limit
-        if len(recent_requests) >= self.requests_per_minute:
+        # Check rate limit exceeded
+        if rate_limited:
             return Response(
                 content='{"detail": "Rate limit exceeded. Please try again later."}',
                 status_code=429,
@@ -162,10 +261,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        # Check burst limit (last 5 seconds)
-        burst_cutoff = now - 5
-        burst_requests = [ts for ts in recent_requests if ts > burst_cutoff]
-        if len(burst_requests) >= self.burst_size:
+        # Check burst limit exceeded
+        if burst_limited:
             return Response(
                 content='{"detail": "Too many requests. Please slow down."}',
                 status_code=429,
@@ -175,14 +272,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        # Record this request
-        self._requests[client_ip].append(now)
-
         # Process request
         response = await call_next(request)
 
         # Add rate limit headers
-        remaining = max(0, self.requests_per_minute - len(self._requests[client_ip]))
         response.headers["X-RateLimit-Limit"] = str(self.requests_per_minute)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Reset"] = str(int(now + 60))
