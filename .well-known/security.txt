@@ -1,0 +1,8 @@
+Contact: mailto:joshleyva816@gmail.com
+Expires: 2026-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://github.com/jnleyva816/Odoo_TCG/security.txt
+
+# Security Policy
+# Please report security vulnerabilities to joshleyva816@gmail.com
+# See SECURITY.md for detailed reporting guidelines

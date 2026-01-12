@@ -1,13 +1,20 @@
 """FastAPI application entry point."""
 
+import json
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from .auth.odoo_auth import get_odoo_auth_service
 from .auth.router import router as auth_router
 from .config import get_settings
+from .middleware import (
+    RateLimitMiddleware,
+    RequestIDMiddleware,
+    SecurityHeadersMiddleware,
+)
 from .routers import (
     cards_router,
     images_router,
@@ -21,12 +28,13 @@ from .services import get_odoo_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan - connect to Odoo on startup."""
+    """Application lifespan - connect to Odoo on startup, cleanup on shutdown."""
     settings = get_settings()
     odoo = get_odoo_service()
     auth = get_odoo_auth_service()
 
-    # Initialize Odoo-based auth
+    # Startup
+    print("🚀 Starting TCG Inventory API...")
     print("🔐 Initializing Odoo authentication...")
     await auth.initialize()
 
@@ -41,7 +49,10 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    print("👋 Shutting down...")
+    # Shutdown
+    print("👋 Shutting down gracefully...")
+    # Add cleanup tasks here (close connections, flush logs, etc.)
+    print("✅ Shutdown complete")
 
 
 def create_app() -> FastAPI:
@@ -59,6 +70,19 @@ def create_app() -> FastAPI:
         # Disable trailing slash redirects - they lose Authorization headers
         redirect_slashes=False,
     )
+
+    # Security middleware (applied in reverse order)
+    app.add_middleware(SecurityHeadersMiddleware, debug=settings.debug)
+    app.add_middleware(
+        RateLimitMiddleware,
+        redis_url=settings.redis_url,
+        requests_per_minute=60,
+        burst_size=10,
+    )
+    app.add_middleware(RequestIDMiddleware)
+
+    # Compression middleware (gzip responses > 500 bytes)
+    app.add_middleware(GZipMiddleware, minimum_size=500)
 
     # CORS middleware
     app.add_middleware(
@@ -108,14 +132,41 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     async def health_check():
-        """Health check endpoint."""
+        """Health check endpoint - liveness probe.
+
+        Returns 200 if application is running.
+        Use for container liveness checks.
+        """
+        return {
+            "status": "healthy",
+            "version": "2.0.0",
+        }
+
+    @app.get("/api/health/ready")
+    async def readiness_check():
+        """Readiness check endpoint.
+
+        Returns 200 if application is ready to serve traffic.
+        Checks dependencies (Odoo connection).
+        Use for Kubernetes readiness probes.
+        """
         odoo = get_odoo_service()
         odoo_connected = odoo._connected
 
+        if not odoo_connected:
+            error_response = {"status": "not_ready", "reason": "Odoo not connected"}
+            return Response(
+                content=json.dumps(error_response),
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                media_type="application/json",
+            )
+
         return {
-            "status": "healthy",
-            "odoo_connected": odoo_connected,
+            "status": "ready",
             "version": "2.0.0",
+            "dependencies": {
+                "odoo": "connected",
+            },
         }
 
     @app.get("/api/features")
