@@ -23,6 +23,7 @@ Technical documentation and specifications:
 |----------|-------------|
 | [API.md](reference/API.md) | REST API endpoints and examples |
 | [TESTING.md](reference/TESTING.md) | Testing strategies and running tests |
+| [PREMIUM_FEATURES.md](reference/PREMIUM_FEATURES.md) | Portfolio Dashboard & Digital Vault features |
 
 ## 📁 Archive
 
@@ -42,4 +43,5 @@ Historical documents and reports:
 - **Deploying?** → [DEPLOYMENT.md](guides/DEPLOYMENT.md)
 - **API Questions?** → [API.md](reference/API.md)
 - **Need to Restore?** → [BACKUP.md](guides/BACKUP.md)
+- **Premium Features?** → [PREMIUM_FEATURES.md](reference/PREMIUM_FEATURES.md)
 

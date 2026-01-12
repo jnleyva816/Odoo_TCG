@@ -6,6 +6,8 @@ interface Features {
   scanner_page: boolean;
   inventory_page: boolean;
   label_printing: boolean;
+  portfolio_dashboard: boolean;
+  public_vault: boolean;
 }
 
 interface FeaturesContextType {
@@ -18,6 +20,8 @@ const defaultFeatures: Features = {
   scanner_page: true,
   inventory_page: true,
   label_printing: true,
+  portfolio_dashboard: false,
+  public_vault: false,
 };
 
 const FeaturesContext = createContext<FeaturesContextType>({

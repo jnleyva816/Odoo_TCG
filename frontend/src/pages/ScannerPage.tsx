@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Search, X, Plus, Minus, Printer, Loader2, Package } from 'lucide-react'
+import { Search, X, Plus, Minus, Printer, Loader2, Package, Check } from 'lucide-react'
 import { searchCards, adjustStock, printLabel, Card } from '../api/client'
 import CardImage from '../components/CardImage'
 
@@ -83,17 +83,23 @@ export default function ScannerPage() {
     }))
   }
 
+  const [processedItems, setProcessedItems] = useState<Set<number>>(new Set())
+
   const processMutation = useMutation({
     mutationFn: async () => {
+      const processed = new Set<number>()
       for (const item of queue) {
         await adjustStock({
           product_id: item.card.id,
           quantity_change: item.quantity,
         })
+        processed.add(item.card.id)
       }
+      return processed
     },
-    onSuccess: () => {
-      setQueue([])
+    onSuccess: (processed) => {
+      // Mark items as processed but don't clear queue
+      setProcessedItems(prev => new Set([...prev, ...processed]))
       inputRef.current?.focus()
     },
   })
@@ -231,18 +237,29 @@ export default function ScannerPage() {
             ) : (
               <>
                 <div className="max-h-[360px] overflow-y-auto">
-                  {queue.map(({ card, quantity }, index) => (
+                  {queue.map(({ card, quantity }, index) => {
+                    const isProcessed = processedItems.has(card.id)
+                    return (
                     <div
                       key={card.id}
-                      className="flex items-center gap-3 p-3 border-b border-surface-100 dark:border-surface-800 animate-fade-in"
+                      className={`flex items-center gap-3 p-3 border-b border-surface-100 dark:border-surface-800 animate-fade-in ${
+                        isProcessed ? 'bg-green-50 dark:bg-green-900/20' : ''
+                      }`}
                       style={{ animationDelay: `${index * 30}ms` }}
                     >
-                      <CardImage
-                        productId={card.id}
-                        alt={card.name}
-                        size="image_128"
-                        className="w-10 h-14 rounded flex-shrink-0"
-                      />
+                      <div className="relative">
+                        <CardImage
+                          productId={card.id}
+                          alt={card.name}
+                          size="image_128"
+                          className="w-10 h-14 rounded flex-shrink-0"
+                        />
+                        {isProcessed && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                            <Check size={12} className="text-white" />
+                          </div>
+                        )}
+                      </div>
                       
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-surface-900 dark:text-white truncate">
@@ -251,6 +268,11 @@ export default function ScannerPage() {
                         <div className="text-xs text-surface-500 font-mono">
                           {card.sku}
                         </div>
+                        {isProcessed && (
+                          <div className="text-xs text-green-600 dark:text-green-400">
+                            Added to inventory
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center bg-surface-100 dark:bg-surface-800 rounded-lg">
@@ -278,17 +300,26 @@ export default function ScannerPage() {
                         <X size={16} />
                       </button>
                     </div>
-                  ))}
+                  )})}
                 </div>
 
                 <div className="p-4 space-y-2 border-t border-surface-200 dark:border-surface-800">
                   <button
                     onClick={() => processMutation.mutate()}
-                    disabled={processMutation.isPending}
-                    className="btn btn-primary w-full py-3"
+                    disabled={processMutation.isPending || queue.every(item => processedItems.has(item.card.id))}
+                    className={`btn w-full py-3 ${
+                      queue.every(item => processedItems.has(item.card.id))
+                        ? 'btn-success bg-green-600 hover:bg-green-700'
+                        : 'btn-primary'
+                    }`}
                   >
                     {processMutation.isPending ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : queue.every(item => processedItems.has(item.card.id)) ? (
+                      <>
+                        <Check size={18} />
+                        All Added to Inventory
+                      </>
                     ) : (
                       <>
                         <Plus size={18} />
@@ -313,7 +344,12 @@ export default function ScannerPage() {
                   </button>
 
                   <button
-                    onClick={() => setQueue([])}
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to clear ${queue.length} items from the queue?`)) {
+                        setQueue([])
+                        setProcessedItems(new Set())
+                      }
+                    }}
                     className="btn btn-ghost w-full text-surface-500"
                   >
                     Clear Queue

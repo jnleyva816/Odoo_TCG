@@ -20,8 +20,11 @@ from .routers import (
     images_router,
     inventory_router,
     labels_router,
+    portfolio_router,
     search_router,
     sets_router,
+    settings_router,
+    vault_router,
 )
 from .services import get_odoo_service
 
@@ -130,6 +133,18 @@ def create_app() -> FastAPI:
         dependencies=[Depends(get_current_user)],
     )
 
+    # Premium feature routers (feature flag checked in router)
+    app.include_router(
+        portfolio_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
+    # Vault has mixed auth - owner endpoints require auth, public share doesn't
+    app.include_router(vault_router, prefix="/api")
+
+    # Settings router - mixed auth (features endpoint is public)
+    app.include_router(settings_router, prefix="/api")
+
     @app.get("/api/health")
     async def health_check():
         """Health check endpoint - liveness probe.
@@ -171,13 +186,15 @@ def create_app() -> FastAPI:
 
     @app.get("/api/features")
     async def get_features():
-        """Get enabled features (public endpoint for frontend)."""
-        return {
-            "sets_page": settings.feature_sets_page,
-            "scanner_page": settings.feature_scanner_page,
-            "inventory_page": settings.feature_inventory_page,
-            "label_printing": settings.feature_label_printing,
-        }
+        """Get enabled features (public endpoint for frontend).
+
+        Fetches from Redis (admin-configurable) with fallback to env vars.
+        """
+        from .services.settings import get_settings_service
+
+        service = get_settings_service()
+        features = await service.get_features()
+        return features.model_dump()
 
     @app.get("/")
     async def root():

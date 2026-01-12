@@ -439,6 +439,12 @@ class OdooService:
         warehouse_id: int | None = None,
     ) -> bool:
         """Adjust stock quantity for a product in a specific warehouse."""
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        logger.info(f"adjust_stock: pid={product_id}, qty={quantity_change}, wh={warehouse_id}")
+
         # Get the location ID for this warehouse
         location_id = None
         if warehouse_id:
@@ -450,6 +456,7 @@ class OdooService:
             )
             if warehouses and warehouses[0].get("lot_stock_id"):
                 location_id = warehouses[0]["lot_stock_id"][0]
+            logger.info(f"Warehouse lookup: warehouses={warehouses}, location_id={location_id}")
 
         # Create inventory adjustment
         try:
@@ -460,6 +467,8 @@ class OdooService:
             else:
                 quant_domain.append(("location_id.usage", "=", "internal"))
 
+            logger.info(f"Quant search domain: {quant_domain}")
+
             quants = await self.search_read(
                 "stock.quant",
                 quant_domain,
@@ -467,10 +476,13 @@ class OdooService:
                 limit=1,
             )
 
+            logger.info(f"Found quants: {quants}")
+
             if quants:
                 # Update existing quant
                 current_qty = quants[0].get("quantity", 0)
                 new_qty = max(0, current_qty + quantity_change)
+                logger.info(f"Updating quant {quants[0]['id']}: {current_qty} -> {new_qty}")
                 await self.write(
                     "stock.quant",
                     [quants[0]["id"]],

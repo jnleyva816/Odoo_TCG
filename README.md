@@ -119,6 +119,10 @@ Control which features are available:
 | `FEATURE_INVENTORY_PAGE` | `true` | Full inventory management |
 | `FEATURE_SETS_PAGE` | `false` | Card set import (admin feature) |
 | `FEATURE_LABEL_PRINTING` | `true` | Brother QL label printing |
+| `FEATURE_PORTFOLIO_DASHBOARD` | `false` | "Wall Street" portfolio analytics |
+| `FEATURE_PUBLIC_VAULT` | `false` | "Digital Vault" public showcase |
+
+See [Premium Features](docs/reference/PREMIUM_FEATURES.md) for details on Portfolio Dashboard and Digital Vault.
 
 ## Architecture
 
@@ -299,10 +303,11 @@ See [docs/README.md](docs/README.md) for the full documentation index.
 - [x] Security enhancements (OWASP compliance)
 - [x] Production-ready monitoring
 - [x] Comprehensive documentation
+- [~] **Portfolio Dashboard** - "Wall Street" analytics (scaffolding done)
+- [~] **Digital Vault** - Public collection showcase (scaffolding done)
 - [ ] eBay auto-listing
 - [ ] eBay order import
 - [ ] Mobile app (PWA support added)
-- [ ] Advanced analytics dashboard
 
 ## License
 

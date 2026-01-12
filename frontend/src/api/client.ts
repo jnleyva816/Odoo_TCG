@@ -272,6 +272,13 @@ export async function adjustStock(adjustment: StockAdjustment): Promise<StockAdj
   return res.json()
 }
 
+// Get card variants (normal, holo, reverse holo, etc.)
+export async function getCardVariants(productId: number): Promise<InventoryItem[]> {
+  const res = await authFetch(`${API_BASE}/inventory/${productId}/variants`)
+  if (!res.ok) throw new Error('Failed to fetch variants')
+  return res.json()
+}
+
 // Generate label
 export async function generateLabel(productId: number, quantity = 1): Promise<LabelResponse> {
   const res = await authFetch(`${API_BASE}/labels/generate`, {

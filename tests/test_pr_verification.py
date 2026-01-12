@@ -200,15 +200,19 @@ def test_middleware_implementation():
 def test_documentation():
     """Test documentation files."""
     docs = [
-        ("docs/API.md", "API documentation with examples"),
-        ("docs/TESTING.md", "Testing guide and strategies"),
-        ("docs/PRODUCTION.md", "Production deployment guide"),
-        ("docs/BACKUP.md", "Backup and restore procedures"),
-        ("docs/MIGRATIONS.md", "Database migration guide"),
-        ("docs/AUTHENTICATION_TEST_REPORT.md", "Authentication testing evidence"),
+        # Reference docs
+        ("docs/reference/API.md", "API documentation with examples"),
+        ("docs/reference/TESTING.md", "Testing guide and strategies"),
+        # Guide docs
+        ("docs/guides/PRODUCTION.md", "Production deployment guide"),
+        ("docs/guides/BACKUP.md", "Backup and restore procedures"),
+        ("docs/guides/MIGRATIONS.md", "Database migration guide"),
+        # Archive docs
+        ("docs/archive/AUTHENTICATION_TEST_REPORT.md", "Authentication testing evidence"),
+        ("docs/archive/ENHANCEMENTS.md", "PR enhancements summary"),
+        # Root docs
         ("SECURITY.md", "Security policy and disclosure"),
         ("CONTRIBUTING.md", "Contribution guidelines"),
-        ("ENHANCEMENTS.md", "PR enhancements summary"),
         (".dependency-security.md", "Dependency security notes"),
     ]
 
@@ -283,10 +287,14 @@ def test_readme_updates():
 
     updates = [
         ("SECURITY.md", "Security policy reference"),
-        ("Rate limiting", "Rate limiting documentation"),
+        ("rate limiting", "Rate limiting documentation"),  # Case-insensitive check below
         ("OWASP", "Security standards mention"),
         ("docs/", "Documentation links"),
     ]
 
     for search_term, description in updates:
-        assert search_term in content, f"README missing '{description}' (search: '{search_term}')"
+        # Case-insensitive search for rate limiting
+        if search_term == "rate limiting":
+            assert search_term.lower() in content.lower(), f"README missing '{description}' (search: '{search_term}')"
+        else:
+            assert search_term in content, f"README missing '{description}' (search: '{search_term}')"

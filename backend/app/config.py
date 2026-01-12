@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     feature_scanner_page: bool = True  # Barcode scanner page
     feature_inventory_page: bool = True  # Inventory management page
     feature_label_printing: bool = True  # Label printing functionality
+    feature_portfolio_dashboard: bool = False  # "Wall Street" portfolio analytics
+    feature_public_vault: bool = False  # "Digital Vault" public showcase
 
     # Redis (for caching and Celery broker)
     redis_url: str = "redis://localhost:6379/0"

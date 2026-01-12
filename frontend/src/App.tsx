@@ -3,10 +3,13 @@ import { useEffect } from 'react'
 import { Sidebar } from './components/Sidebar'
 import ScannerPage from './pages/ScannerPage'
 import InventoryPage from './pages/InventoryPage'
+import SetDetailPage from './pages/SetDetailPage'
 import SetsPage from './pages/SetsPage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import SettingsPage from './pages/SettingsPage'
+import PortfolioDashboardPage from './pages/PortfolioDashboardPage'
+import VaultPage from './pages/VaultPage'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FeaturesProvider, useFeatures } from './contexts/FeaturesContext'
 
@@ -83,16 +86,28 @@ function AppRoutes() {
 
       {/* Inventory Page - conditionally enabled */}
       {features.inventory_page && (
-        <Route
-          path="/inventory"
-          element={
-            <ProtectedRoute>
-              <Sidebar>
-                <InventoryPage />
-              </Sidebar>
-            </ProtectedRoute>
-          }
-        />
+        <>
+          <Route
+            path="/inventory"
+            element={
+              <ProtectedRoute>
+                <Sidebar>
+                  <InventoryPage />
+                </Sidebar>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/set/:setId"
+            element={
+              <ProtectedRoute>
+                <Sidebar>
+                  <SetDetailPage />
+                </Sidebar>
+              </ProtectedRoute>
+            }
+          />
+        </>
       )}
 
       {/* Sets Page - conditionally enabled */}
@@ -103,6 +118,34 @@ function AppRoutes() {
             <ProtectedRoute>
               <Sidebar>
                 <SetsPage />
+              </Sidebar>
+            </ProtectedRoute>
+          }
+        />
+      )}
+
+      {/* Portfolio Dashboard - conditionally enabled */}
+      {features.portfolio_dashboard && (
+        <Route
+          path="/portfolio"
+          element={
+            <ProtectedRoute>
+              <Sidebar>
+                <PortfolioDashboardPage />
+              </Sidebar>
+            </ProtectedRoute>
+          }
+        />
+      )}
+
+      {/* Digital Vault - conditionally enabled */}
+      {features.public_vault && (
+        <Route
+          path="/vault"
+          element={
+            <ProtectedRoute>
+              <Sidebar>
+                <VaultPage />
               </Sidebar>
             </ProtectedRoute>
           }

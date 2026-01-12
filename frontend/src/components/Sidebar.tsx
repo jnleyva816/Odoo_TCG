@@ -11,6 +11,8 @@ import {
   Warehouse,
   Sun,
   Moon,
+  TrendingUp,
+  Share2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeaturesContext';
@@ -58,6 +60,8 @@ export function Sidebar({ children }: SidebarProps) {
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', enabled: true },
     { to: '/scanner', icon: ScanLine, label: 'Scanner', enabled: features.scanner_page },
     { to: '/inventory', icon: Package, label: 'Inventory', enabled: features.inventory_page },
+    { to: '/portfolio', icon: TrendingUp, label: 'Portfolio', enabled: features.portfolio_dashboard },
+    { to: '/vault', icon: Share2, label: 'Vault', enabled: features.public_vault },
     { to: '/settings', icon: Settings, label: 'Settings', enabled: true },
   ];
 

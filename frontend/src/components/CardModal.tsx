@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { X, Plus, Minus, Printer, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { X, Plus, Minus, Printer, Loader2, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getCard, adjustStock, getPrinterStatus, printLabel, getPrinterPreviewUrl } from '../api/client'
+import { getCard, adjustStock, getPrinterStatus, printLabel, getPrinterPreviewUrl, getCardVariants } from '../api/client'
 import CardImage from './CardImage'
 
 interface CardModalProps {
@@ -9,37 +9,64 @@ interface CardModalProps {
   onClose: () => void
 }
 
+// Helper to extract variant name from full card name
+function getVariantLabel(name: string): string {
+  const patterns = [
+    /\((Reverse Holo(?:foil)?)\)\s*$/i,
+    /\((Holo(?:foil)?)\)\s*$/i,
+    /\((Cosmos Holo)\)\s*$/i,
+    /-\s*(Reverse Holo(?:foil)?)\s*$/i,
+    /-\s*(Holo(?:foil)?)\s*$/i,
+  ]
+  
+  for (const pattern of patterns) {
+    const match = name.match(pattern)
+    if (match) return match[1]
+  }
+  return 'Normal'
+}
+
 export default function CardModal({ cardId, onClose }: CardModalProps) {
   const queryClient = useQueryClient()
   const [adjustAmount, setAdjustAmount] = useState(1)
   const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle')
   const [printMessage, setPrintMessage] = useState('')
+  const [selectedVariantId, setSelectedVariantId] = useState<number>(cardId)
 
-  // Fetch card details
-  const { data: card, isLoading } = useQuery({
-    queryKey: ['card', cardId],
-    queryFn: () => getCard(cardId),
+  // Fetch card variants
+  const { data: variants = [], isLoading: variantsLoading } = useQuery({
+    queryKey: ['card-variants', cardId],
+    queryFn: () => getCardVariants(cardId),
+  })
+
+  // Fetch selected card details
+  const { data: card, isLoading: cardLoading } = useQuery({
+    queryKey: ['card', selectedVariantId],
+    queryFn: () => getCard(selectedVariantId),
+    enabled: selectedVariantId > 0,
   })
 
   // Fetch printer status
   const { data: printerStatus } = useQuery({
     queryKey: ['printer-status'],
     queryFn: getPrinterStatus,
-    refetchInterval: 10000, // Check every 10s
+    refetchInterval: 10000,
   })
 
   // Stock adjustment mutation
   const stockMutation = useMutation({
     mutationFn: adjustStock,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['card', cardId] })
+      queryClient.invalidateQueries({ queryKey: ['card', selectedVariantId] })
+      queryClient.invalidateQueries({ queryKey: ['card-variants', cardId] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      queryClient.invalidateQueries({ queryKey: ['set-cards'] })
     },
   })
 
   // Print label mutation
   const printMutation = useMutation({
-    mutationFn: () => printLabel(cardId),
+    mutationFn: () => printLabel(selectedVariantId),
     onMutate: () => {
       setPrintStatus('printing')
       setPrintMessage('')
@@ -52,7 +79,6 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
         setPrintStatus('error')
         setPrintMessage(data.error || 'Print failed')
       }
-      // Reset status after 3 seconds
       setTimeout(() => setPrintStatus('idle'), 3000)
     },
     onError: (error) => {
@@ -71,12 +97,35 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [onClose])
 
+  // Update selectedVariantId when cardId changes
+  useEffect(() => {
+    setSelectedVariantId(cardId)
+  }, [cardId])
+
   const handleAdjust = (change: number) => {
+    console.log('Stock adjustment:', { product_id: selectedVariantId, quantity_change: change, adjustAmount })
     stockMutation.mutate({
-      product_id: cardId,
+      product_id: selectedVariantId,
       quantity_change: change,
     })
   }
+
+  const currentVariantIndex = variants.findIndex(v => v.id === selectedVariantId)
+  const hasMultipleVariants = variants.length > 1
+
+  const goToPrevVariant = () => {
+    if (currentVariantIndex > 0) {
+      setSelectedVariantId(variants[currentVariantIndex - 1].id)
+    }
+  }
+
+  const goToNextVariant = () => {
+    if (currentVariantIndex < variants.length - 1) {
+      setSelectedVariantId(variants[currentVariantIndex + 1].id)
+    }
+  }
+
+  const isLoading = variantsLoading || cardLoading
 
   if (isLoading) {
     return (
@@ -100,12 +149,58 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
 
   return (
     <ModalWrapper onClose={onClose}>
+      {/* Variant Toggle - At the top if multiple variants exist */}
+      {hasMultipleVariants && (
+        <div className="mb-4 md:mb-6">
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={goToPrevVariant}
+              disabled={currentVariantIndex === 0}
+              className="p-2 rounded-lg text-surface-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            
+            <div className="flex gap-1.5 overflow-x-auto py-1 px-2">
+              {variants.map((variant) => {
+                const label = getVariantLabel(variant.name)
+                const isSelected = variant.id === selectedVariantId
+                return (
+                  <button
+                    key={variant.id}
+                    onClick={() => setSelectedVariantId(variant.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                      isSelected
+                        ? 'bg-primary-500 text-white shadow-sm'
+                        : 'bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700'
+                    }`}
+                  >
+                    {label}
+                    <span className={`ml-1.5 text-xs ${isSelected ? 'text-primary-100' : 'text-surface-400'}`}>
+                      ({variant.quantity})
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            
+            <button
+              onClick={goToNextVariant}
+              disabled={currentVariantIndex === variants.length - 1}
+              className="p-2 rounded-lg text-surface-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6">
         {/* Card Image - native resolution, centered with contrasting background */}
         <div className="flex justify-center items-center">
           <div className="bg-black dark:bg-white rounded-xl p-4 shadow-lg">
             <div className="w-[200px] h-[279px] overflow-hidden rounded-lg">
-              <CardImage productId={card.id} alt={card.name} size="image_256" className="w-full h-full" />
+              <CardImage productId={selectedVariantId} alt={card.name} size="image_256" className="w-full h-full" />
             </div>
           </div>
         </div>
@@ -167,13 +262,17 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
             <div className="text-sm font-medium text-surface-500 dark:text-surface-400 mb-2">
               Label Preview
             </div>
-            <div className="bg-white border border-surface-200 dark:border-surface-700 rounded-lg p-2 md:p-3 flex justify-center">
-              <img
-                src={getPrinterPreviewUrl(cardId)}
-                alt="Label preview"
-                className="max-w-full h-auto"
-                style={{ maxHeight: '120px' }}
-              />
+            <div className="bg-white border border-surface-200 dark:border-surface-700 rounded-lg p-3 md:p-4 flex justify-center items-center" style={{ minHeight: '100px' }}>
+              <div style={{ transform: 'rotate(90deg)', transformOrigin: 'center center' }}>
+                <img
+                  src={getPrinterPreviewUrl(selectedVariantId)}
+                  alt="Label preview"
+                  style={{ 
+                    height: '280px',
+                    width: 'auto',
+                  }}
+                />
+              </div>
             </div>
           </div>
 

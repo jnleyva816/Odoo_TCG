@@ -164,15 +164,19 @@ def test_middleware_functionality():
 def test_documentation():
     """Test that all documentation files exist and are non-empty."""
     required_docs = [
-        ("docs/API.md", "API documentation"),
-        ("docs/TESTING.md", "Testing guide"),
-        ("docs/PRODUCTION.md", "Production deployment guide"),
-        ("docs/BACKUP.md", "Backup and restore guide"),
-        ("docs/MIGRATIONS.md", "Database migrations guide"),
-        ("docs/AUTHENTICATION_TEST_REPORT.md", "Authentication test report"),
+        # Reference docs
+        ("docs/reference/API.md", "API documentation"),
+        ("docs/reference/TESTING.md", "Testing guide"),
+        # Guide docs
+        ("docs/guides/PRODUCTION.md", "Production deployment guide"),
+        ("docs/guides/BACKUP.md", "Backup and restore guide"),
+        ("docs/guides/MIGRATIONS.md", "Database migrations guide"),
+        # Archive docs
+        ("docs/archive/AUTHENTICATION_TEST_REPORT.md", "Authentication test report"),
+        ("docs/archive/ENHANCEMENTS.md", "Enhancement summary"),
+        # Root docs
         ("SECURITY.md", "Security policy"),
         ("CONTRIBUTING.md", "Contribution guidelines"),
-        ("ENHANCEMENTS.md", "Enhancement summary"),
     ]
 
     for file_path, description in required_docs:

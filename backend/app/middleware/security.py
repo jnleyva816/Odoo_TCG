@@ -92,8 +92,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         redis_url: str = "redis://localhost:6379/0",
-        requests_per_minute: int = 60,
-        burst_size: int = 10,
+        requests_per_minute: int = 120,  # 2 requests/second average
+        burst_size: int = 30,  # Allow 30 rapid requests (e.g., page load)
     ):
         super().__init__(app)
         self.redis_url = redis_url
@@ -229,8 +229,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Check rate limit and process request."""
-        # Skip rate limiting for health checks and readiness probes
-        if request.url.path in ["/api/health", "/api/health/ready", "/api/features"]:
+        path = request.url.path
+
+        # Skip rate limiting for:
+        # - Health checks and readiness probes
+        # - Image endpoints (static resources, high volume)
+        # - Feature flags (needed on every page load)
+        # - Settings features endpoint (public)
+        skip_paths = [
+            "/api/health",
+            "/api/health/ready",
+            "/api/features",
+            "/api/settings/features",
+        ]
+
+        if path in skip_paths or path.startswith("/api/images/"):
             return await call_next(request)
 
         client_ip = self._get_client_ip(request)
@@ -239,12 +252,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Try Redis first, fallback to in-memory
         redis_client = await self._get_redis()
         if redis_client:
-            rate_limited, remaining, burst_limited, burst_remaining = (
-                await self._check_rate_limit_redis(client_ip, redis_client)
-            )
+            (
+                rate_limited,
+                remaining,
+                burst_limited,
+                burst_remaining,
+            ) = await self._check_rate_limit_redis(client_ip, redis_client)
         else:
-            rate_limited, remaining, burst_limited, burst_remaining = (
-                self._check_rate_limit_memory(client_ip)
+            rate_limited, remaining, burst_limited, burst_remaining = self._check_rate_limit_memory(
+                client_ip
             )
 
         # Check rate limit exceeded
