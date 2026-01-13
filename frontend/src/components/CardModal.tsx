@@ -151,8 +151,8 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
     <ModalWrapper onClose={onClose}>
       {/* Variant Toggle - At the top if multiple variants exist */}
       {hasMultipleVariants && (
-        <div className="mb-4 md:mb-6">
-          <div className="flex items-center justify-center gap-2">
+        <div className="mb-2 md:mb-6">
+          <div className="flex items-center justify-center gap-1 md:gap-2">
             <button
               onClick={goToPrevVariant}
               disabled={currentVariantIndex === 0}
@@ -161,7 +161,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
               <ChevronLeft size={20} />
             </button>
             
-            <div className="flex gap-1.5 overflow-x-auto py-1 px-2">
+            <div className="flex gap-1 md:gap-1.5 overflow-x-auto py-1 px-1 md:px-2">
               {variants.map((variant) => {
                 const label = getVariantLabel(variant.name)
                 const isSelected = variant.id === selectedVariantId
@@ -169,14 +169,14 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
                   <button
                     key={variant.id}
                     onClick={() => setSelectedVariantId(variant.id)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    className={`px-2 md:px-3 py-1 md:py-1.5 rounded-full text-xs md:text-sm font-medium whitespace-nowrap transition-all ${
                       isSelected
                         ? 'bg-primary-500 text-white shadow-sm'
                         : 'bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700'
                     }`}
                   >
                     {label}
-                    <span className={`ml-1.5 text-xs ${isSelected ? 'text-primary-100' : 'text-surface-400'}`}>
+                    <span className={`ml-1 md:ml-1.5 text-xs ${isSelected ? 'text-primary-100' : 'text-surface-400'}`}>
                       ({variant.quantity})
                     </span>
                   </button>
@@ -195,11 +195,11 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
         </div>
       )}
 
-      <div className="flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6">
+      <div className="flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6">
         {/* Card Image - native resolution, centered with contrasting background */}
         <div className="flex justify-center items-center">
-          <div className="bg-black dark:bg-white rounded-xl p-4 shadow-lg">
-            <div className="w-[200px] h-[279px] overflow-hidden rounded-lg">
+          <div className="bg-black dark:bg-white rounded-lg md:rounded-xl p-2 md:p-4 shadow-lg">
+            <div className="w-[120px] h-[167px] md:w-[200px] md:h-[279px] overflow-hidden rounded-md md:rounded-lg">
               <CardImage productId={selectedVariantId} alt={card.name} size="image_256" className="w-full h-full" />
             </div>
           </div>
@@ -207,11 +207,11 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
 
         {/* Card Info */}
         <div className="flex flex-col">
-          <h2 className="font-display font-bold text-lg md:text-2xl text-surface-900 dark:text-white mb-2 text-center md:text-left">
+          <h2 className="font-display font-bold text-base md:text-2xl text-surface-900 dark:text-white mb-1 md:mb-2 text-center md:text-left">
             {card.name}
           </h2>
           
-          <div className="space-y-2 md:space-y-3 text-sm mb-4 md:mb-6">
+          <div className="space-y-1 md:space-y-3 text-xs md:text-sm mb-2 md:mb-6">
             <InfoRow label="SKU" value={card.sku} mono />
             <InfoRow label="Set" value={card.set_name || 'N/A'} />
             <InfoRow label="Price" value={`$${parseFloat(card.price).toFixed(2)}`} />
@@ -219,12 +219,12 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
           </div>
 
           {/* Stock Management */}
-          <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-3 md:p-4 mb-4 md:mb-6">
-            <div className="text-sm font-medium text-surface-500 dark:text-surface-400 mb-2">
+          <div className="bg-surface-100 dark:bg-surface-800 rounded-lg md:rounded-xl p-2 md:p-4 mb-2 md:mb-6">
+            <div className="text-xs md:text-sm font-medium text-surface-500 dark:text-surface-400 mb-1 md:mb-2">
               Current Stock
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-display text-3xl md:text-4xl font-bold text-surface-900 dark:text-white">
+              <span className="font-display text-2xl md:text-4xl font-bold text-surface-900 dark:text-white">
                 {stockMutation.isPending ? '...' : card.quantity}
               </span>
               
@@ -232,9 +232,9 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
                 <button
                   onClick={() => handleAdjust(-adjustAmount)}
                   disabled={stockMutation.isPending || card.quantity < adjustAmount}
-                  className="btn btn-secondary p-2 md:p-3"
+                  className="btn btn-secondary p-1.5 md:p-3"
                 >
-                  <Minus size={18} />
+                  <Minus size={16} className="md:w-[18px] md:h-[18px]" />
                 </button>
                 
                 <input
@@ -243,45 +243,42 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
                   max="100"
                   value={adjustAmount}
                   onChange={(e) => setAdjustAmount(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-12 md:w-16 text-center input text-sm"
+                  className="w-10 md:w-16 text-center input text-xs md:text-sm py-1 md:py-2"
                 />
                 
                 <button
                   onClick={() => handleAdjust(adjustAmount)}
                   disabled={stockMutation.isPending}
-                  className="btn btn-primary p-2 md:p-3"
+                  className="btn btn-primary p-1.5 md:p-3"
                 >
-                  <Plus size={18} />
+                  <Plus size={16} className="md:w-[18px] md:h-[18px]" />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Label Preview */}
-          <div className="mb-4 md:mb-6">
+          {/* Label Preview - hidden on mobile */}
+          <div className="hidden md:block mb-4 md:mb-6">
             <div className="text-sm font-medium text-surface-500 dark:text-surface-400 mb-2">
               Label Preview
             </div>
-            <div className="bg-white border border-surface-200 dark:border-surface-700 rounded-lg p-3 md:p-4 flex justify-center items-center" style={{ minHeight: '100px' }}>
-              <div style={{ transform: 'rotate(90deg)', transformOrigin: 'center center' }}>
+            <div className="flex justify-center">
+              <div className="bg-surface-100 dark:bg-surface-800 p-2 rounded-lg overflow-hidden rotate-90">
                 <img
                   src={getPrinterPreviewUrl(selectedVariantId)}
                   alt="Label preview"
-                  style={{ 
-                    height: '280px',
-                    width: 'auto',
-                  }}
+                  className="max-h-[200px] w-auto"
                 />
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="mt-auto flex flex-col gap-2 md:gap-3">
+          <div className="mt-auto flex flex-col gap-1.5 md:gap-3">
             <button
               onClick={() => printMutation.mutate()}
               disabled={!printerStatus?.connected || printStatus === 'printing'}
-              className={`btn flex-1 text-sm md:text-base py-2 md:py-2.5 ${
+              className={`btn flex-1 text-xs md:text-base py-1.5 md:py-2.5 ${
                 printStatus === 'success' 
                   ? 'btn-success bg-green-600 hover:bg-green-700' 
                   : printStatus === 'error'
@@ -351,7 +348,7 @@ function ModalWrapper({ children, onClose }: { children: React.ReactNode; onClos
           <X size={20} />
         </button>
         
-        <div className="p-4 md:p-6">
+        <div className="p-3 md:p-6">
           {children}
         </div>
       </div>
