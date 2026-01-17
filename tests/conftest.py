@@ -2,16 +2,18 @@
 
 import os
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from jose import jwt
 
 # Add src to path for imports
 src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
-# Set test environment variables
+# Set test environment variables BEFORE importing app modules
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
 os.environ["ODOO_URL"] = "http://localhost:8069"
 os.environ["ODOO_DB"] = "test-db"
@@ -64,34 +66,77 @@ def mock_odoo_connection():
 
 @pytest.fixture
 def mock_odoo_auth():
-    """Mock Odoo authentication."""
-    with patch("app.auth.odoo_auth.OdooAuthService.validate_credentials") as mock_auth:
-        mock_auth.return_value = {"id": 1, "username": "testuser", "email": "test@example.com"}
+    """Mock Odoo authentication - patches the authenticate_user method."""
+    from app.auth.models import User, UserRole
+
+    mock_user = User(
+        id=1,
+        username="testuser@example.com",
+        email="testuser@example.com",
+        role=UserRole.USER,
+        is_active=True,
+        warehouse_id=1,
+        warehouse_ids=[1],
+        created_at=datetime.utcnow(),
+        last_login=datetime.utcnow(),
+    )
+
+    with patch("app.auth.odoo_auth.OdooAuthService.authenticate_user") as mock_auth:
+        mock_auth.return_value = (mock_user, "test-password")
         yield mock_auth
 
 
 @pytest.fixture
-def auth_token(client):
-    """Get valid authentication token for testing."""
+def auth_token():
+    """Get valid authentication token for testing.
+
+    Creates a JWT token that matches the format expected by OdooAuthService.
+    The 'sub' field must be a valid email since User.email = username.
+    """
     try:
-        # Create a test token
-        from datetime import datetime, timedelta
-
-        from jose import jwt
-
         from app.config import get_settings
 
         settings = get_settings()
         expire = datetime.utcnow() + timedelta(minutes=30)
+
+        # Token payload matching OdooAuthService.create_access_token format
         token_data = {
-            "sub": "testuser",
-            "exp": expire,
+            "sub": "testuser@example.com",  # Must be valid email
             "user_id": 1,
+            "role": "user",
+            "warehouse_id": 1,
+            "warehouse_ids": [1],
+            "odoo_pwd": "test-password",
+            "exp": expire,
         }
         token = jwt.encode(token_data, settings.jwt_secret_key, algorithm="HS256")
         return token
     except Exception:
         pytest.skip("Unable to generate test token")
+
+
+@pytest.fixture
+def admin_token():
+    """Get admin authentication token for testing."""
+    try:
+        from app.config import get_settings
+
+        settings = get_settings()
+        expire = datetime.utcnow() + timedelta(minutes=30)
+
+        token_data = {
+            "sub": "admin@example.com",
+            "user_id": 2,
+            "role": "admin",
+            "warehouse_id": 1,
+            "warehouse_ids": [1, 2, 3],
+            "odoo_pwd": "admin-password",
+            "exp": expire,
+        }
+        token = jwt.encode(token_data, settings.jwt_secret_key, algorithm="HS256")
+        return token
+    except Exception:
+        pytest.skip("Unable to generate admin test token")
 
 
 @pytest.fixture
@@ -115,11 +160,11 @@ def mock_meilisearch():
 @pytest.fixture(autouse=True)
 def reset_singletons():
     """Reset singleton instances between tests."""
-    # Clear any cached settings or services
-    from functools import lru_cache
-
-    lru_cache.cache_clear = lambda: None  # Prevent errors if not available
     yield
-    # Cleanup after test
+    # Cleanup after test - reset cached settings
+    try:
+        from app.config import get_settings
 
-
+        get_settings.cache_clear()
+    except (ImportError, AttributeError):
+        pass

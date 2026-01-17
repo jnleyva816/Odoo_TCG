@@ -29,7 +29,9 @@ class MetricsCollector:
     Supports Prometheus format export.
     """
 
-    registry: "CollectorRegistry | None" = field(default_factory=lambda: CollectorRegistry() if PROMETHEUS_AVAILABLE else None)
+    registry: "CollectorRegistry | None" = field(
+        default_factory=lambda: CollectorRegistry() if PROMETHEUS_AVAILABLE else None
+    )
     _enabled: bool = PROMETHEUS_AVAILABLE
 
     def __post_init__(self):
@@ -135,8 +137,12 @@ class MetricsCollector:
         if not self._enabled:
             return
 
-        self.http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc()
-        self.http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
+        self.http_requests_total.labels(
+            method=method, endpoint=endpoint, status=status
+        ).inc()
+        self.http_request_duration_seconds.labels(
+            method=method, endpoint=endpoint
+        ).observe(duration)
 
     def record_login_attempt(self, success: bool):
         """Record login attempt."""

@@ -5,7 +5,6 @@ Comprehensive Test Suite for PR: Production-Grade Security, Observability, and O
 This script tests all components added in the PR to verify they work correctly.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -123,13 +122,12 @@ def test_config_additions():
 
 def test_middleware_functionality():
     """Test middleware functionality."""
+    from app.middleware.request_id import RequestIDMiddleware
+    from app.middleware.security import SecurityHeadersMiddleware
     from starlette.applications import Starlette
     from starlette.responses import JSONResponse
     from starlette.routing import Route
     from starlette.testclient import TestClient
-
-    from app.middleware.request_id import RequestIDMiddleware
-    from app.middleware.security import RateLimitMiddleware, SecurityHeadersMiddleware
 
     # Create a simple test app
     async def homepage(request):

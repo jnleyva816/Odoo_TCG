@@ -3,9 +3,9 @@
 import pytest
 
 from tcg_automation.commands.barcodes import (
+    BARCODE_PREFIX,
     calculate_ean13_check_digit,
     generate_ean13,
-    BARCODE_PREFIX,
 )
 
 

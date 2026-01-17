@@ -1,9 +1,9 @@
 """Tests for authentication system."""
 
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
+
+import pytest
 
 # Add backend to path
 backend_path = Path(__file__).parent.parent / "backend"
@@ -98,6 +98,7 @@ class TestJWTTokens:
     def test_decode_expired_token(self):
         """Test decoding an expired token."""
         from datetime import timedelta
+
         from app.auth.service import AuthService
 
         service = AuthService()
@@ -123,8 +124,8 @@ class TestUserRoles:
 
     def test_token_contains_role(self):
         """Test that tokens contain role information."""
-        from app.auth.service import AuthService
         from app.auth.models import UserRole
+        from app.auth.service import AuthService
 
         service = AuthService()
         token = service.create_access_token(

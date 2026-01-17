@@ -1,7 +1,6 @@
 """Tests for application configuration."""
 
 import os
-import pytest
 import sys
 from pathlib import Path
 from unittest.mock import patch

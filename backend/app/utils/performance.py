@@ -44,7 +44,10 @@ class PerformanceMonitor:
     async def get_stats(self, function_name: str | None = None) -> dict[str, Any]:
         """Get performance statistics."""
         async with self._lock:
-            metrics = [m for m in self._metrics if function_name is None or m.function_name == function_name]
+            metrics = [
+                m for m in self._metrics
+                if function_name is None or m.function_name == function_name
+            ]
 
             if not metrics:
                 return {}
@@ -106,7 +109,7 @@ def async_timed(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def timed(func: Callable[..., T]) -> Callable[..., T]:
     """Decorator to measure sync function execution time.
-    
+
     Note: This decorator is deprecated. Use async_timed for consistent
     monitoring behavior. Synchronous function timing is logged but not
     recorded in metrics to avoid async/sync mixing issues.
@@ -117,7 +120,7 @@ def timed(func: Callable[..., T]) -> Callable[..., T]:
             time.sleep(1)
     """
     import logging
-    
+
     logger = logging.getLogger(__name__)
 
     @functools.wraps(func)
@@ -459,7 +462,10 @@ class CircuitBreaker:
         async with self._lock:
             # Check if circuit is open
             if self._state == "OPEN":
-                if self._last_failure_time and time.time() - self._last_failure_time >= self.timeout:
+                if (
+                    self._last_failure_time
+                    and time.time() - self._last_failure_time >= self.timeout
+                ):
                     self._state = "HALF_OPEN"
                 else:
                     raise RuntimeError("Circuit breaker is OPEN")
