@@ -106,12 +106,19 @@ def async_timed(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def timed(func: Callable[..., T]) -> Callable[..., T]:
     """Decorator to measure sync function execution time.
+    
+    Note: This decorator is deprecated. Use async_timed for consistent
+    monitoring behavior. Synchronous function timing is logged but not
+    recorded in metrics to avoid async/sync mixing issues.
 
     Usage:
         @timed
         def my_function():
             time.sleep(1)
     """
+    import logging
+    
+    logger = logging.getLogger(__name__)
 
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> T:
@@ -121,8 +128,11 @@ def timed(func: Callable[..., T]) -> Callable[..., T]:
             return result
         finally:
             duration_ms = (time.perf_counter() - start) * 1000
-            # Note: Can't await in sync function, so we skip recording
-            # Consider using async_timed for better monitoring
+            # Log timing for debugging (not recorded in metrics)
+            logger.debug(
+                f"{func.__name__} completed in {duration_ms:.2f}ms",
+                extra={"duration_ms": duration_ms, "function": func.__name__},
+            )
 
     return wrapper
 
@@ -153,16 +163,23 @@ class QueryCache:
         self._lock = asyncio.Lock()
 
     async def _get_redis(self) -> "redis.Redis | None":
-        """Get Redis client, lazily initialized."""
+        """Get Redis client, lazily initialized with production settings."""
         if not REDIS_AVAILABLE:
             return None
 
         if self._redis_client is None:
             try:
+                # Production-ready Redis configuration
                 self._redis_client = redis.from_url(
                     self.redis_url,
                     encoding="utf-8",
                     decode_responses=True,
+                    socket_connect_timeout=5,  # 5 second connection timeout
+                    socket_timeout=5,  # 5 second operation timeout
+                    retry_on_timeout=True,
+                    health_check_interval=30,  # Health check every 30 seconds
+                    # SSL verification (when using rediss:// URLs)
+                    # ssl_cert_reqs="required",  # Uncomment for SSL
                 )
                 await self._redis_client.ping()
                 self._redis_available = True

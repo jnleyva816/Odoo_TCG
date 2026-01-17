@@ -29,7 +29,7 @@ class MetricsCollector:
     Supports Prometheus format export.
     """
 
-    registry: Any = field(default_factory=lambda: CollectorRegistry() if PROMETHEUS_AVAILABLE else None)
+    registry: "CollectorRegistry | None" = field(default_factory=lambda: CollectorRegistry() if PROMETHEUS_AVAILABLE else None)
     _enabled: bool = PROMETHEUS_AVAILABLE
 
     def __post_init__(self):
