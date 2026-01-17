@@ -111,4 +111,3 @@ class PortfolioStats(BaseModel):
     top_gainers: list[TopMover] = Field(default_factory=list)
     top_losers: list[TopMover] = Field(default_factory=list)
     recent_price_changes: list[PriceMovement] = Field(default_factory=list)
-

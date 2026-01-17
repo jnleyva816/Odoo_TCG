@@ -163,4 +163,3 @@ async def refresh_portfolio_stats(
     """
     # TODO: Trigger Celery task
     return {"message": "Portfolio refresh queued", "status": "pending"}
-
