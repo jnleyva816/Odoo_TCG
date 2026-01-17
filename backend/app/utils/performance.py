@@ -45,7 +45,8 @@ class PerformanceMonitor:
         """Get performance statistics."""
         async with self._lock:
             metrics = [
-                m for m in self._metrics
+                m
+                for m in self._metrics
                 if function_name is None or m.function_name == function_name
             ]
 

@@ -32,6 +32,9 @@ jobs:
           # Install only production dependencies for security scanning
           cd backend && pip install -e . && cd ..
       
+      - name: Create reports directory
+        run: mkdir -p reports
+
       - name: Run pip-audit (SBOM-based vulnerability scan)
         run: |
           cd backend

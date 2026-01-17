@@ -31,30 +31,54 @@ POKEMON_CATEGORY_ID = 3
 # Base directory for CSVs (relative to project root)
 CSV_BASE_DIR = Path(__file__).parent.parent.parent.parent / "csvs"
 
-# Common set code aliases (maps user-friendly codes to TCGPlayer abbreviations/group IDs)
+# Common set code aliases (maps user-friendly codes to TCGPlayer group IDs)
 SET_CODE_ALIASES = {
-    # Scarlet & Violet Era - Main Sets
-    "sv10": 24269,  # Destined Rivals
-    "sv09": 24073,  # Journey Together
-    "sv08": 23651,  # Surging Sparks
-    "sv07": 23537,  # Stellar Crown
-    "sv06": 23473,  # Twilight Masquerade
-    "sv05": 23381,  # Temporal Forces
-    "sv04": 23286,  # Paradox Rift
-    "sv03": 23228,  # Obsidian Flames
-    "sv02": 23120,  # Paldea Evolved
-    "sv01": 22873,  # Scarlet & Violet Base Set
-    # Scarlet & Violet Era - Special Sets
-    "pre": 23821,  # Prismatic Evolutions
-    "sfa": 23529,  # Shrouded Fable
-    "paf": 23353,  # Paldean Fates
-    "mew": 23237,  # Scarlet & Violet 151
-    # Mega Evolution Era
-    "me03": 24587,  # Perfect Order
-    "me02": 24448,  # Phantasmal Flames
-    "me01": 24380,  # Mega Evolution
-    "asc": 24541,  # Ascended Heroes
-    "mep": 24451,  # Mega Evolution Promo
+    # ============================================================
+    # SCARLET & VIOLET ERA - Main Sets
+    # ============================================================
+    "sv10": 24269,  # SV10: Destined Rivals
+    "dri": 24269,   # SV10: Destined Rivals (official abbr)
+    "sv09": 24073,  # SV09: Journey Together
+    "jtg": 24073,   # SV09: Journey Together (official abbr)
+    "sv08": 23651,  # SV08: Surging Sparks
+    "ssp": 23651,   # SV08: Surging Sparks (official abbr)
+    "sv07": 23537,  # SV07: Stellar Crown
+    "scr": 23537,   # SV07: Stellar Crown (official abbr)
+    "sv06": 23473,  # SV06: Twilight Masquerade
+    "twm": 23473,   # SV06: Twilight Masquerade (official abbr)
+    "sv05": 23381,  # SV05: Temporal Forces
+    "tef": 23381,   # SV05: Temporal Forces (official abbr)
+    "sv04": 23286,  # SV04: Paradox Rift
+    "par": 23286,   # SV04: Paradox Rift (official abbr)
+    "sv03": 23228,  # SV03: Obsidian Flames
+    "obf": 23228,   # SV03: Obsidian Flames (official abbr)
+    "sv02": 23120,  # SV02: Paldea Evolved
+    "pal": 23120,   # SV02: Paldea Evolved (official abbr)
+    "sv01": 22873,  # SV01: Scarlet & Violet Base Set
+    "svi": 22873,   # SV01: Scarlet & Violet Base Set (official abbr)
+    # ============================================================
+    # SCARLET & VIOLET ERA - Special Sets
+    # ============================================================
+    "pre": 23821,   # SV: Prismatic Evolutions
+    "sfa": 23529,   # SV: Shrouded Fable
+    "paf": 23353,   # SV: Paldean Fates
+    "mew": 23237,   # SV: Scarlet & Violet 151
+    "svp": 22872,   # SV: Scarlet & Violet Promo Cards
+    "sve": 24382,   # SVE: Scarlet & Violet Energies
+    # Japanese exclusive SV sets
+    "wht": 24326,   # SV: White Flare (Japan)
+    "blk": 24325,   # SV: Black Bolt (Japan)
+    # ============================================================
+    # MEGA EVOLUTION ERA
+    # ============================================================
+    "me03": 24587,  # ME03: Perfect Order
+    "me02": 24448,  # ME02: Phantasmal Flames
+    "pfl": 24448,   # ME02: Phantasmal Flames (official abbr)
+    "me01": 24380,  # ME01: Mega Evolution
+    "meg": 24380,   # ME01: Mega Evolution (official abbr)
+    "asc": 24541,   # ME: Ascended Heroes
+    "mep": 24451,   # ME: Mega Evolution Promo
+    "mee": 24461,   # MEE: Mega Evolution Energies
 }
 
 
