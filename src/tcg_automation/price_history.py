@@ -97,8 +97,9 @@ def init_price_history_table() -> bool:
 
 def record_prices_batch(prices: list[dict[str, Any]], source: str = "tcgcsv") -> int:
     """
-    Record multiple prices in a batch.
-    Returns number of records inserted, or 0 if DB not accessible.
+    Record prices in batch, but only if price changed from last recorded value.
+    Avoids redundant data - only stores when price actually changes.
+    Returns number of NEW records inserted.
     """
     if not PSYCOPG2_AVAILABLE or not prices:
         return 0
@@ -106,31 +107,55 @@ def record_prices_batch(prices: list[dict[str, Any]], source: str = "tcgcsv") ->
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                data = [
-                    (
-                        p["sku"],
-                        p.get("price", 0),
-                        p.get("low_price"),
-                        p.get("mid_price"),
-                        p.get("high_price"),
-                        p.get("market_price"),
-                        source,
-                    )
-                    for p in prices
-                ]
-
-                execute_batch(
-                    cur,
+                # Get the latest price for each SKU to compare
+                skus = [p["sku"] for p in prices]
+                cur.execute(
                     """
-                    INSERT INTO price_history
-                        (product_sku, price, low_price, mid_price, high_price, market_price, source)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    SELECT DISTINCT ON (product_sku)
+                        product_sku, price
+                    FROM price_history
+                    WHERE product_sku = ANY(%s)
+                    ORDER BY product_sku, recorded_at DESC
                     """,
-                    data,
-                    page_size=100,
+                    (skus,),
                 )
-            conn.commit()
-        return len(prices)
+                last_prices = {row[0]: float(row[1]) for row in cur.fetchall()}
+
+                # Only insert if price changed (or no previous record)
+                new_prices = []
+                for p in prices:
+                    sku = p["sku"]
+                    new_price = float(p.get("price", 0))
+                    last_price = last_prices.get(sku)
+
+                    # Record if: no previous price OR price changed by more than 1 cent
+                    if last_price is None or abs(new_price - last_price) >= 0.01:
+                        new_prices.append(
+                            (
+                                sku,
+                                new_price,
+                                p.get("low_price"),
+                                p.get("mid_price"),
+                                p.get("high_price"),
+                                p.get("market_price"),
+                                source,
+                            )
+                        )
+
+                if new_prices:
+                    execute_batch(
+                        cur,
+                        """
+                        INSERT INTO price_history
+                            (product_sku, price, low_price, mid_price, high_price, market_price, source)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        new_prices,
+                        page_size=100,
+                    )
+                    conn.commit()
+                    return len(new_prices)
+                return 0
     except Exception as e:
         logger.debug(f"Price history recording skipped: {e}")
         return 0

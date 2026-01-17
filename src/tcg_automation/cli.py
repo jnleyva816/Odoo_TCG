@@ -176,7 +176,12 @@ def list_sets():
 @main.command()
 @click.option("--dry-run", is_flag=True, help="Show price changes without updating")
 @click.option("--set", "set_code", help="Only sync a specific set")
-def sync(dry_run, set_code):
+@click.option(
+    "--no-download",
+    is_flag=True,
+    help="Use existing local CSVs instead of downloading fresh ones",
+)
+def sync(dry_run, set_code, no_download):
     """
     Sync prices from tcgcsv.com.
 
@@ -186,17 +191,20 @@ def sync(dry_run, set_code):
         tcg sync
         tcg sync --dry-run
         tcg sync --set sv09
+        tcg sync --no-download   # Use local CSVs
     """
     from .commands.sync_prices import sync_all_prices, sync_set_prices
 
+    download_fresh = not no_download
+
     if set_code:
-        result = sync_set_prices(set_code, dry_run)
+        result = sync_set_prices(set_code, dry_run, download_fresh=download_fresh)
         if "error" in result:
             console.print(f"[red]Error: {result['error']}[/red]")
             sys.exit(1)
         console.print(f"[green]Updated {result.get('updated', 0)} prices[/green]")
     else:
-        result = sync_all_prices(dry_run)
+        result = sync_all_prices(dry_run, download_fresh=download_fresh)
         if "error" in result:
             console.print(f"[red]Error: {result['error']}[/red]")
             sys.exit(1)
