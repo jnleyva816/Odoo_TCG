@@ -96,3 +96,4 @@ class TestBarcodeFormat:
         assert barcode[3:12] == "000000001"
 
 
+

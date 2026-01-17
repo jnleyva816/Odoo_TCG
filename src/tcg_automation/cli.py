@@ -4,8 +4,11 @@ TCG Automation CLI
 Unified command-line interface for all TCG automation tasks.
 
 Usage:
-    tcg import sv09           # Import a set
-    tcg sync                  # Sync all prices
+    tcg download sv09         # Download CSV for a set
+    tcg download --all        # Download all Pokemon sets
+    tcg import sv09           # Import a set from CSV
+    tcg import --all          # Import all downloaded sets
+    tcg sync                  # Sync all prices (download + update)
     tcg server                # Start card scanner
     tcg labels ME02-001       # Generate a label
 """
@@ -44,36 +47,103 @@ def main(ctx, verbose):
 
 
 # =============================================================================
-# IMPORT COMMAND
+# DOWNLOAD COMMAND
 # =============================================================================
 
 
 @main.command()
-@click.argument("set_code")
+@click.argument("set_codes", nargs=-1)
+@click.option("--all", "download_all", is_flag=True, help="Download all Pokemon sets")
+def download(set_codes, download_all):
+    """
+    Download card set CSVs from tcgcsv.com.
+
+    Downloads CSVs and organizes them by set and date for historical pricing:
+        csvs/sv09/2026-01-16_ProductsAndPrices.csv
+
+    SET_CODES: One or more set codes to download (e.g., sv09 sv08)
+
+    Examples:
+        tcg download sv09              # Download one set
+        tcg download sv09 sv08 me02    # Download multiple sets
+        tcg download --all             # Download ALL Pokemon sets
+    """
+    from .commands.download import download_sets, list_downloaded_sets
+
+    if not set_codes and not download_all:
+        # Show what's already downloaded
+        downloaded = list_downloaded_sets()
+        if downloaded:
+            console.print("[bold]Downloaded sets:[/bold]\n")
+            for info in downloaded:
+                console.print(
+                    f"  [cyan]{info['set_code'].upper():6}[/cyan] - "
+                    f"{info['count']} snapshots, latest: {info['latest']}"
+                )
+            console.print("\n[dim]Use 'tcg download <set_code>' or 'tcg download --all'[/dim]")
+        else:
+            console.print("[yellow]No CSVs downloaded yet.[/yellow]")
+            console.print("[dim]Use 'tcg download --all' to download all Pokemon sets[/dim]")
+        return
+
+    result = download_sets(
+        set_codes=list(set_codes) if set_codes else None,
+        download_all=download_all,
+    )
+
+    if "error" in result:
+        console.print(f"[red]Error: {result['error']}[/red]")
+        sys.exit(1)
+
+
+# =============================================================================
+# IMPORT COMMAND
+# =============================================================================
+
+
+@main.command(name="import")
+@click.argument("set_code", required=False)
+@click.option("--all", "import_all", is_flag=True, help="Import all downloaded sets")
 @click.option("--dry-run", is_flag=True, help="Show what would be imported without making changes")
 @click.option("--delete-existing", is_flag=True, help="Delete existing products before import")
 @click.option("--skip-images", is_flag=True, help="Skip downloading card images")
-def import_set(set_code, dry_run, delete_existing, skip_images):
+def import_cmd(set_code, import_all, dry_run, delete_existing, skip_images):
     """
-    Import a card set from tcgcsv.com.
+    Import card sets from downloaded CSVs into Odoo.
+
+    Reads from csvs/{set_code}/ folder (latest CSV file).
+    Run 'tcg download' first to get the CSV files.
 
     SET_CODE: The set code (e.g., sv09, me02, sv03)
 
     Examples:
-        tcg import sv09
-        tcg import me02 --dry-run
-        tcg import sv03 --delete-existing
+        tcg import sv09              # Import one set
+        tcg import sv09 --dry-run    # Preview what would be imported
+        tcg import --all             # Import all downloaded sets
+        tcg import --all --skip-images  # Import all without downloading images
     """
-    from .commands.import_set import SET_MAPPINGS
+    from .commands.import_set import get_available_sets
+    from .commands.import_set import import_all_sets as do_import_all
     from .commands.import_set import import_set as do_import
 
-    if set_code.lower() == "list":
-        console.print("[bold]Available sets:[/bold]")
-        for code, info in SET_MAPPINGS.items():
-            console.print(f"  {code.upper():6} - {info['name']}")
+    if import_all:
+        result = do_import_all(dry_run=dry_run, skip_images=skip_images)
+    elif set_code:
+        result = do_import(set_code, dry_run, delete_existing, skip_images)
+    else:
+        # Show available sets
+        available = get_available_sets()
+        if available:
+            console.print("[bold]Available sets to import:[/bold]\n")
+            for code, info in sorted(available.items()):
+                console.print(
+                    f"  [cyan]{code.upper():6}[/cyan] - {info['csv_count']} CSVs, "
+                    f"latest: {info['latest'].name}"
+                )
+            console.print("\n[dim]Use 'tcg import <set_code>' or 'tcg import --all'[/dim]")
+        else:
+            console.print("[yellow]No CSVs found. Run 'tcg download --all' first.[/yellow]")
         return
-
-    result = do_import(set_code, dry_run, delete_existing, skip_images)
 
     if "error" in result:
         console.print(f"[red]Error: {result['error']}[/red]")
@@ -82,14 +152,20 @@ def import_set(set_code, dry_run, delete_existing, skip_images):
 
 @main.command(name="list-sets")
 def list_sets():
-    """List all available sets that can be imported."""
-    from .commands.import_set import SET_MAPPINGS
+    """List all Pokemon sets available to download from tcgcsv.com."""
+    from .commands.download import get_all_pokemon_sets
 
-    console.print("[bold]Available sets:[/bold]\n")
-    for code, info in sorted(SET_MAPPINGS.items()):
-        console.print(
-            f"  [cyan]{code.upper():6}[/cyan] - {info['name']} (Group ID: {info['group_id']})"
-        )
+    console.print("[bold]Fetching available sets from tcgcsv.com...[/bold]\n")
+    sets = get_all_pokemon_sets()
+
+    # Show recent sets (with abbreviation)
+    recent = [s for s in sets if s.get("abbreviation")]
+    console.print(f"[bold]Available sets ({len(recent)} with codes):[/bold]\n")
+    for s in sorted(recent, key=lambda x: x["groupId"], reverse=True)[:30]:
+        abbr = s.get("abbreviation", "").lower()
+        name = s.get("name", "Unknown")
+        gid = s.get("groupId")
+        console.print(f"  [cyan]{abbr:8}[/cyan] - {name} (ID: {gid})")
 
 
 # =============================================================================

@@ -1,40 +1,45 @@
 """
-Import card sets from tcgcsv.com into Odoo.
+Import card sets from local CSV files into Odoo.
+
+Reads from organized CSV structure:
+    csvs/
+      sv09/
+        2026-01-16_ProductsAndPrices.csv  ← uses latest
+      sv08/
+        ...
+
+Features:
+- Parallel image downloading for speed
+- Higher resolution image attempts
+- Update capability for existing products
+- Parent category hierarchy (Pokemon / Set Name)
 """
 
 import base64
 import csv
-import io
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any
 
 import requests
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
 from ..odoo_client import get_odoo_client
 from .barcodes import generate_ean13, get_next_sequence
+from .download import CSV_BASE_DIR, get_latest_csv
 
 logger = logging.getLogger(__name__)
 console = Console()
 
-# TCGPlayer Group IDs for Pokemon sets
-SET_MAPPINGS = {
-    # Scarlet & Violet Era
-    "sv09": {"group_id": 23901, "name": "Journey Together"},
-    "me01": {"group_id": 24380, "name": "Mega Evolution"},
-    "me02": {"group_id": 23783, "name": "Phantasmal Flames"},
-    "sv08": {"group_id": 23779, "name": "Surging Sparks"},
-    "sv07": {"group_id": 23654, "name": "Stellar Crown"},
-    "sv06": {"group_id": 23580, "name": "Twilight Masquerade"},
-    "sv05": {"group_id": 23457, "name": "Temporal Forces"},
-    "sv04": {"group_id": 23360, "name": "Paradox Rift"},
-    "sv03": {"group_id": 23218, "name": "Obsidian Flames"},
-    "sv02": {"group_id": 23104, "name": "Paldea Evolved"},
-    "sv01": {"group_id": 22926, "name": "Scarlet & Violet"},
-    # Add more sets as needed
-}
+# Session for faster HTTP requests (connection pooling)
+session = requests.Session()
+session.headers.update({"User-Agent": "Mozilla/5.0 TCG-Importer/1.0"})
+
+# Parent category for all Pokemon sets in Odoo
+PARENT_CATEGORY = "Pokemon"
 
 
 def generate_sku(set_prefix: str, card_number: str, variant: str) -> str:
@@ -47,35 +52,119 @@ def generate_sku(set_prefix: str, card_number: str, variant: str) -> str:
     return sku
 
 
-def fetch_set_data(group_id: int) -> tuple[list[dict], list[dict]]:
-    """Fetch product and price data from tcgcsv.com."""
-    products_url = f"https://tcgcsv.com/tcgplayer/{group_id}/products"
-    prices_url = f"https://tcgcsv.com/tcgplayer/{group_id}/prices"
+def generate_display_name(name: str, card_number: str, variant: str) -> str:
+    """Generate standardized display name."""
+    display_name = f"{name} ({card_number.zfill(3)})"
+    if variant and variant != "Normal":
+        display_name += f" ({variant})"
+    return display_name
 
-    console.print(f"[blue]Fetching products from tcgcsv.com (Group {group_id})...[/blue]")
-    products_resp = requests.get(products_url, timeout=30)
-    products_resp.raise_for_status()
 
-    console.print("[blue]Fetching prices...[/blue]")
-    prices_resp = requests.get(prices_url, timeout=30)
-    prices_resp.raise_for_status()
+def load_csv_data(csv_path: Path) -> list[dict]:
+    """
+    Load and parse a CSV file.
 
-    # Parse CSVs
-    products = list(csv.DictReader(io.StringIO(products_resp.text)))
-    prices = list(csv.DictReader(io.StringIO(prices_resp.text)))
-
-    return products, prices
+    Returns:
+        List of dicts with card data
+    """
+    with open(csv_path, "r", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    return rows
 
 
 def download_image(url: str) -> str | None:
-    """Download image and convert to base64."""
+    """Download image and return base64 encoded data. Tries higher resolution first."""
     try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        return base64.b64encode(resp.content).decode("utf-8")
+        # Try higher resolution first
+        high_res_url = url.replace("_200w.jpg", "_400w.jpg")
+        resp = session.get(high_res_url, timeout=10)
+        if resp.status_code == 200:
+            return base64.b64encode(resp.content).decode("utf-8")
+        # Fallback to original
+        resp = session.get(url, timeout=10)
+        if resp.status_code == 200:
+            return base64.b64encode(resp.content).decode("utf-8")
     except Exception as e:
         logger.warning(f"Failed to download image: {e}")
-        return None
+    return None
+
+
+def download_images_parallel(cards: list[dict]) -> dict[str, str]:
+    """
+    Download all unique images in parallel.
+    Returns dict of {card_number: base64_image}
+    """
+    # Get unique images (one per card number, not per variant)
+    unique_images = {}
+    for card in cards:
+        ext_number = card.get("extNumber", "").strip()
+        match = re.search(r"(\d+)", ext_number)
+        card_number = match.group(1) if match else ext_number
+        image_url = card.get("imageUrl", "").strip()
+
+        if card_number and image_url and card_number not in unique_images:
+            unique_images[card_number] = image_url
+
+    console.print(
+        f"[blue]Downloading {len(unique_images)} unique card images in parallel...[/blue]"
+    )
+
+    image_cache: dict[str, str] = {}
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Downloading images...", total=len(unique_images))
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_card = {
+                executor.submit(download_image, url): card_num
+                for card_num, url in unique_images.items()
+            }
+
+            for future in as_completed(future_to_card):
+                card_num = future_to_card[future]
+                progress.update(task, advance=1)
+
+                try:
+                    result = future.result()
+                    if result:
+                        image_cache[card_num] = result
+                except Exception:
+                    pass
+
+    console.print(
+        f"[green]Successfully downloaded {len(image_cache)}/{len(unique_images)} images[/green]"
+    )
+    return image_cache
+
+
+def get_available_sets() -> dict[str, dict]:
+    """
+    Get all available sets that have been downloaded.
+
+    Returns:
+        Dict mapping set_code to set info
+    """
+    available = {}
+    if not CSV_BASE_DIR.exists():
+        return available
+
+    for set_dir in CSV_BASE_DIR.iterdir():
+        if set_dir.is_dir():
+            csv_files = list(set_dir.glob("*_ProductsAndPrices.csv"))
+            if csv_files:
+                available[set_dir.name.lower()] = {
+                    "path": set_dir,
+                    "csv_count": len(csv_files),
+                    "latest": sorted(csv_files, reverse=True)[0],
+                }
+
+    return available
 
 
 def import_set(
@@ -85,7 +174,7 @@ def import_set(
     skip_images: bool = False,
 ) -> dict[str, Any]:
     """
-    Import a card set into Odoo.
+    Import a card set into Odoo from local CSV.
 
     Args:
         set_code: Set code (e.g., 'sv09', 'me02')
@@ -96,50 +185,86 @@ def import_set(
     Returns:
         Summary of import results
     """
-    if set_code.lower() not in SET_MAPPINGS:
-        available = ", ".join(SET_MAPPINGS.keys())
-        console.print(f"[red]Unknown set: {set_code}[/red]")
-        console.print(f"[yellow]Available sets: {available}[/yellow]")
-        return {"error": f"Unknown set: {set_code}"}
+    # Find the CSV file
+    csv_path = get_latest_csv(set_code)
+    if not csv_path:
+        available = get_available_sets()
+        if available:
+            console.print(f"[red]No CSV found for set: {set_code}[/red]")
+            console.print("[yellow]Available sets:[/yellow]")
+            for code in sorted(available.keys()):
+                console.print(f"  - {code.upper()}")
+            console.print("\n[dim]Run 'tcg download {set_code}' first to download the CSV[/dim]")
+        else:
+            console.print("[red]No CSVs found. Run 'tcg download --all' first.[/red]")
+        return {"error": f"No CSV found for set: {set_code}"}
 
-    set_info = SET_MAPPINGS[set_code.lower()]
-    group_id = set_info["group_id"]
-    set_name = set_info["name"]
+    # Get proper set name from API
+    from .download import SET_CODE_ALIASES, get_all_pokemon_sets
 
-    console.print(f"[bold green]Importing: {set_name} ({set_code.upper()})[/bold green]")
+    set_name = set_code.upper()  # Default fallback
+    if set_code.lower() in SET_CODE_ALIASES:
+        group_id = SET_CODE_ALIASES[set_code.lower()]
+        # Fetch set info from API to get proper name
+        try:
+            all_sets = get_all_pokemon_sets()
+            for s in all_sets:
+                if s.get("groupId") == group_id:
+                    set_name = s.get("name", set_code.upper())
+                    break
+        except Exception:
+            pass  # Use fallback
 
-    # Fetch data
-    products, prices = fetch_set_data(group_id)
-    console.print(f"[green]Found {len(products)} products, {len(prices)} price entries[/green]")
+    console.print(f"[bold green]Importing: {set_code.upper()}[/bold green]")
+    console.print(f"[dim]CSV: {csv_path}[/dim]")
 
-    # Build price lookup
-    price_lookup: dict[str, float] = {}
-    for p in prices:
-        if p.get("subTypeName") in ("Normal", "Holofoil", "Reverse Holofoil"):
-            product_id = p.get("productId", "")
-            variant = p.get("subTypeName", "Normal")
-            price = float(p.get("marketPrice") or p.get("midPrice") or 0)
-            price_lookup[f"{product_id}:{variant}"] = price
+    # Load CSV data
+    all_rows = load_csv_data(csv_path)
+    console.print(f"[green]Loaded {len(all_rows)} rows from CSV[/green]")
 
-    # Filter to cards only
-    cards = [p for p in products if p.get("categoryId") == "3"]
-    console.print(f"[green]Filtered to {len(cards)} cards[/green]")
+    # Filter to cards only - cards have extNumber field populated
+    cards = [
+        row
+        for row in all_rows
+        if row.get("extNumber")
+        and row.get("extNumber").strip()
+        and "Code Card" not in row.get("name", "")
+    ]
+    console.print(f"[green]Filtered to {len(cards)} cards (excluding sealed/accessories)[/green]")
+
+    if not cards:
+        console.print("[yellow]No cards found in this set[/yellow]")
+        return {"error": "No cards found"}
 
     if dry_run:
         console.print("[yellow]DRY RUN - no changes will be made[/yellow]")
+        console.print("\n[bold]Sample cards that would be imported:[/bold]")
+        for card in cards[:15]:
+            name = card.get("name", "Unknown")
+            ext_number = card.get("extNumber", "?")
+            rarity = card.get("extRarity", "")
+            variant = card.get("subTypeName", "Normal") or "Normal"
+            price = card.get("marketPrice") or card.get("midPrice") or "0"
+            # Extract just the number (e.g., "001" from "001/159")
+            match = re.search(r"(\d+)", ext_number)
+            card_number = match.group(1) if match else ext_number
+            sku = generate_sku(set_code, card_number, variant)
+            display_name = generate_display_name(name, card_number, variant)
+            console.print(f"  {sku}: {display_name} - {rarity} - {variant} @ ${price}")
+        if len(cards) > 15:
+            console.print(f"  ... and {len(cards) - 15} more")
+        return {"created": len(cards), "dry_run": True}
 
     odoo = get_odoo_client()
     if not odoo.connect():
         return {"error": "Failed to connect to Odoo"}
 
-    # Get or create category
-    if not dry_run:
-        category_id = odoo.get_or_create_category(set_name)
-    else:
-        category_id = 0
+    # Get or create category with parent hierarchy (Pokemon / Set Name)
+    category_id = odoo.get_or_create_category(set_name, PARENT_CATEGORY)
+    console.print(f"[blue]Category: {PARENT_CATEGORY} / {set_name} (ID: {category_id})[/blue]")
 
     # Delete existing if requested
-    if delete_existing and not dry_run:
+    if delete_existing:
         console.print("[yellow]Deleting existing products...[/yellow]")
         existing = odoo.search(
             "product.product", [("default_code", "like", f"{set_code.lower()}-")]
@@ -148,103 +273,138 @@ def import_set(
             odoo.unlink("product.product", existing)
             console.print(f"[yellow]Deleted {len(existing)} existing products[/yellow]")
 
+    # Download all images in parallel (before processing cards)
+    image_cache: dict[str, str] = {}
+    if not skip_images:
+        image_cache = download_images_parallel(cards)
+
     # Process cards
-    stats = {"created": 0, "skipped": 0, "errors": 0}
-    variants = ["Normal", "Holofoil", "Reverse Holofoil"]
+    stats = {"created": 0, "updated": 0, "skipped": 0, "errors": 0}
 
     # Get next barcode sequence number
-    if not dry_run:
-        next_barcode_seq = get_next_sequence(odoo)
-        console.print(f"[blue]Starting barcode sequence: {next_barcode_seq}[/blue]")
-    else:
-        next_barcode_seq = 1  # Dummy for dry run
+    next_barcode_seq = get_next_sequence(odoo)
+    console.print(f"[blue]Starting barcode sequence: {next_barcode_seq}[/blue]")
 
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Importing cards...", total=len(cards) * len(variants))
+        task = progress.add_task("Importing cards...", total=len(cards))
 
         for card in cards:
+            progress.update(task, advance=1)
+
             name = card.get("name", "Unknown")
-            product_id = card.get("productId", "")
-            ext_number = card.get("extNumber", "")
-            image_url = card.get("imageUrl", "")
+            ext_number = card.get("extNumber", "").strip()
+            rarity = card.get("extRarity", "")
+            variant = card.get("subTypeName", "Normal") or "Normal"
 
             # Extract card number
             match = re.search(r"(\d+)", ext_number)
             card_number = match.group(1) if match else ext_number
 
-            for variant in variants:
-                progress.update(task, advance=1)
+            # Get price
+            try:
+                price = float(card.get("marketPrice") or card.get("midPrice") or 0)
+            except (ValueError, TypeError):
+                price = 0.0
 
-                sku = generate_sku(set_code, card_number, variant)
-                display_name = f"{name} ({card_number.zfill(3)})"
-                if variant != "Normal":
-                    display_name += f" ({variant})"
+            sku = generate_sku(set_code, card_number, variant)
+            display_name = generate_display_name(name, card_number, variant)
 
-                # Check price
-                price_key = f"{product_id}:{variant}"
-                price = price_lookup.get(price_key, 0.0)
+            # Build product data
+            product_data = {
+                "name": display_name,
+                "default_code": sku,
+                "list_price": price,
+                "categ_id": category_id,
+                "type": "product",
+                "sale_ok": True,
+                "purchase_ok": True,
+            }
 
-                # Skip variants with no price (likely don't exist)
-                if price == 0 and variant != "Normal":
-                    continue
+            # Add image from cache (same image for all variants of a card)
+            if card_number in image_cache:
+                product_data["image_1920"] = image_cache[card_number]
 
-                if dry_run:
-                    console.print(
-                        f"  [dim]Would create: {display_name} ({sku}) @ ${price:.2f}[/dim]"
-                    )
-                    stats["created"] += 1
-                    continue
+            # Store rarity and set name in description
+            description_parts = []
+            if rarity:
+                description_parts.append(f"Rarity: {rarity}")
+            if set_name:
+                description_parts.append(f"Set: {set_name}")
+            if description_parts:
+                product_data["description"] = "\n".join(description_parts)
 
-                # Check if exists
-                existing = odoo.get_product_by_sku(sku)
-                if existing and not delete_existing:
-                    stats["skipped"] += 1
-                    continue
+            # Check if product exists
+            existing = odoo.get_product_by_sku(sku)
 
-                # Download image (only for first variant to save bandwidth)
-                image_b64 = None
-                if not skip_images and image_url and variant == "Normal":
-                    image_b64 = download_image(image_url)
-
-                # Create product with EAN-13 barcode
-                try:
+            try:
+                if existing:
+                    # Update existing product
+                    odoo.write("product.product", [existing["id"]], product_data)
+                    stats["updated"] += 1
+                else:
+                    # Create new product with EAN-13 barcode
                     barcode = generate_ean13(next_barcode_seq)
                     next_barcode_seq += 1
-
-                    # Base product data (standard Odoo fields only)
-                    product_data = {
-                        "name": display_name,
-                        "default_code": sku,
-                        "barcode": barcode,
-                        "list_price": price,
-                        "categ_id": category_id,
-                        "type": "product",
-                        "image_1920": image_b64,
-                    }
-
-                    # Store rarity and set name in description if custom fields don't exist
-                    # This ensures data is preserved even without custom fields
-                    description_parts = []
-                    if card.get("rarityName"):
-                        description_parts.append(f"Rarity: {card.get('rarityName')}")
-                    if set_name:
-                        description_parts.append(f"Set: {set_name}")
-                    if description_parts:
-                        product_data["description"] = "\n".join(description_parts)
+                    product_data["barcode"] = barcode
 
                     odoo.create("product.product", product_data)
                     stats["created"] += 1
-                except Exception as e:
-                    logger.error(f"Failed to create {sku}: {e}")
-                    stats["errors"] += 1
+            except Exception as e:
+                logger.error(f"Failed to create/update {sku}: {e}")
+                stats["errors"] += 1
 
     console.print("\n[bold green]Import complete![/bold green]")
     console.print(f"  Created: {stats['created']}")
+    console.print(f"  Updated: {stats['updated']}")
     console.print(f"  Skipped: {stats['skipped']}")
     console.print(f"  Errors: {stats['errors']}")
 
     return stats
+
+
+def import_all_sets(
+    dry_run: bool = False,
+    skip_images: bool = False,
+) -> dict[str, Any]:
+    """
+    Import all downloaded sets into Odoo.
+
+    Args:
+        dry_run: If True, don't actually create products
+        skip_images: If True, don't download images
+
+    Returns:
+        Summary of import results
+    """
+    available = get_available_sets()
+    if not available:
+        console.print("[red]No CSVs found. Run 'tcg download --all' first.[/red]")
+        return {"error": "No CSVs found"}
+
+    console.print(f"[bold green]Importing {len(available)} sets...[/bold green]")
+
+    all_stats = {"sets": 0, "created": 0, "updated": 0, "errors": 0}
+
+    for set_code in sorted(available.keys()):
+        console.print(f"\n{'=' * 60}")
+        result = import_set(set_code, dry_run=dry_run, skip_images=skip_images)
+        if "error" not in result:
+            all_stats["sets"] += 1
+            all_stats["created"] += result.get("created", 0)
+            all_stats["updated"] += result.get("updated", 0)
+            all_stats["errors"] += result.get("errors", 0)
+
+    console.print(f"\n{'=' * 60}")
+    console.print("[bold green]All imports complete![/bold green]")
+    console.print(f"  Sets imported: {all_stats['sets']}")
+    console.print(f"  Total created: {all_stats['created']}")
+    console.print(f"  Total updated: {all_stats['updated']}")
+    console.print(f"  Total errors: {all_stats['errors']}")
+
+    return all_stats

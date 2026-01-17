@@ -27,10 +27,13 @@ load_dotenv()
 # ============================================================================
 # CONFIGURATION - Edit these for different sets
 # ============================================================================
-CSV_FILE = "/home/jleyva/Odoo_TCG/src/tcg_automation/csvs/SV08SurgingSparksProductsAndPrices.csv"
-SET_CODE = "sv08"  # lowercase for SKU consistency
-SET_NAME = "SV08: Surging Sparks"  # Category name format: "CODE: Name"
+CSV_FILE = "/home/jleyva/Odoo_TCG/src/tcg_automation/csvs/SV09JourneyTogetherProductsAndPrices.csv"
+SET_CODE = "sv09"  # lowercase for SKU consistency
+SET_NAME = "SV09: Journey Together"  # Category name format: "CODE: Name"
 PARENT_CATEGORY = "Pokemon"  # Parent category in Odoo
+
+# Dry run mode - set to True to preview without making changes
+DRY_RUN = True  # Change to False to actually import
 
 # Session for faster HTTP requests (connection pooling)
 session = requests.Session()
@@ -121,22 +124,11 @@ def download_images_parallel(cards: list[dict]) -> dict[str, str]:
 def main():
     print("=" * 60)
     print(f"CSV Import: {SET_NAME} ({SET_CODE.upper()})")
+    if DRY_RUN:
+        print("*** DRY RUN MODE - No changes will be made ***")
     print("=" * 60)
     
-    # Connect to Odoo
-    print("\nConnecting to Odoo...")
-    client = OdooClient()
-    if not client.connect():
-        print("ERROR: Failed to connect to Odoo")
-        sys.exit(1)
-    print("Connected!")
-    
-    # Get or create category (Pokemon / MEP: Mega Evolution Promos)
-    print(f"Setting up category: {PARENT_CATEGORY} / {SET_NAME}...")
-    category_id = client.get_or_create_category(SET_NAME, PARENT_CATEGORY)
-    print(f"Category ID: {category_id}")
-    
-    # Read CSV
+    # Read CSV first (no Odoo connection needed for dry run preview)
     print(f"\nReading: {CSV_FILE}")
     with open(CSV_FILE, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -153,6 +145,49 @@ def main():
         cards.append(row)
     
     print(f"Cards to import: {len(cards)}")
+    
+    # Show sample cards in dry run mode
+    if DRY_RUN:
+        print("\n" + "-" * 60)
+        print("SAMPLE CARDS (first 15):")
+        print("-" * 60)
+        for i, row in enumerate(cards[:15]):
+            name = row.get('name', '').strip()
+            ext_number = row.get('extNumber', '').strip()
+            variant = row.get('subTypeName', 'Normal').strip() or 'Normal'
+            rarity = row.get('extRarity', '').strip()
+            
+            match = re.search(r"(\d+)", ext_number)
+            card_number = match.group(1) if match else ext_number
+            
+            try:
+                price = float(row.get('marketPrice') or row.get('midPrice') or 0)
+            except (ValueError, TypeError):
+                price = 0.0
+            
+            sku = generate_sku(SET_CODE, card_number, variant)
+            print(f"  {sku}: {name} ({ext_number}) - {rarity} - {variant} @ ${price:.2f}")
+        
+        if len(cards) > 15:
+            print(f"  ... and {len(cards) - 15} more cards")
+        
+        print("\n" + "=" * 60)
+        print("DRY RUN COMPLETE - Set DRY_RUN = False to actually import")
+        print("=" * 60)
+        return
+    
+    # Connect to Odoo (only if not dry run)
+    print("\nConnecting to Odoo...")
+    client = OdooClient()
+    if not client.connect():
+        print("ERROR: Failed to connect to Odoo")
+        sys.exit(1)
+    print("Connected!")
+    
+    # Get or create category
+    print(f"Setting up category: {PARENT_CATEGORY} / {SET_NAME}...")
+    category_id = client.get_or_create_category(SET_NAME, PARENT_CATEGORY)
+    print(f"Category ID: {category_id}")
     
     # Get next barcode sequence
     print("\nGetting next barcode sequence...")
@@ -173,7 +208,7 @@ def main():
     for i, row in enumerate(cards):
         name = row.get('name', '').strip()
         ext_number = row.get('extNumber', '').strip()
-        variant = row.get('subTypeName', 'Normal').strip()
+        variant = row.get('subTypeName', 'Normal').strip() or 'Normal'
         
         # Extract card number
         match = re.search(r"(\d+)", ext_number)
@@ -209,6 +244,14 @@ def main():
         # Add image from cache (same image for all variants of a card)
         if card_number in image_cache:
             vals['image_1920'] = image_cache[card_number]
+        
+        # Store rarity in description
+        rarity = row.get('extRarity', '').strip()
+        description_parts = []
+        if rarity:
+            description_parts.append(f"Rarity: {rarity}")
+        description_parts.append(f"Set: {SET_NAME}")
+        vals['description'] = "\n".join(description_parts)
         
         try:
             if existing:

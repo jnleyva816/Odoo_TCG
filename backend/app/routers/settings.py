@@ -112,3 +112,4 @@ async def reset_settings(
     """
     service = get_settings_service()
     return await service.reset_to_defaults()
+

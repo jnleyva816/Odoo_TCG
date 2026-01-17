@@ -47,3 +47,4 @@ class SettingsUpdate(BaseModel):
     features: dict[str, bool] | None = None
     site_name: str | None = None
     maintenance_mode: bool | None = None
+

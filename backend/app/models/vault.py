@@ -116,3 +116,4 @@ class VaultListItem(BaseModel):
     view_count: int
     updated_at: datetime
     public_url: str | None = None
+
