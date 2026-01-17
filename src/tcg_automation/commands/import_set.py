@@ -344,11 +344,12 @@ def import_set(
 
             try:
                 if existing:
-                    # Update existing product
-                    odoo.write("product.product", [existing["id"]], product_data)
+                    # Update existing product - ONLY update price
+                    price_update = {"list_price": price}
+                    odoo.write("product.product", [existing["id"]], price_update)
                     stats["updated"] += 1
                 else:
-                    # Create new product with EAN-13 barcode
+                    # Create new product with all data + EAN-13 barcode
                     barcode = generate_ean13(next_barcode_seq)
                     next_barcode_seq += 1
                     product_data["barcode"] = barcode

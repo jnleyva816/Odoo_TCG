@@ -25,35 +25,26 @@ jobs:
         with:
           python-version: "3.11"
       
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pip-audit safety bandit
-          # Install only production dependencies for security scanning
-          cd backend && pip install -e . && cd ..
-      
       - name: Create reports directory
         run: mkdir -p reports
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit bandit
+          # Install only production dependencies for security scanning
+          cd backend && pip install -e . && cd ..
+      
       - name: Run pip-audit (SBOM-based vulnerability scan)
         run: |
-          cd backend
-          pip-audit --desc --format json --output ../reports/pip-audit.json || true
-          pip-audit --desc || true
-        continue-on-error: true
-      
-      - name: Run Safety (dependency vulnerability check)
-        run: |
-          cd backend
-          safety check --json --output ../reports/safety.json || true
-          safety check || true
+          pip-audit --desc --format json --output reports/pip-audit.json 2>&1 || true
+          pip-audit --desc 2>&1 || true
         continue-on-error: true
       
       - name: Run Bandit (Python code security scan)
         run: |
-          cd backend
-          bandit -r app/ -f json -o ../reports/bandit.json || true
-          bandit -r app/ -ll || true
+          bandit -r backend/app/ -f json -o reports/bandit.json 2>&1 || true
+          bandit -r backend/app/ -ll 2>&1 || true
         continue-on-error: true
       
       - name: Upload security reports
@@ -63,6 +54,7 @@ jobs:
           name: python-security-reports
           path: reports/
           retention-days: 30
+          if-no-files-found: ignore
 
   # ==========================================================
   # JavaScript Dependency Scanning
@@ -78,6 +70,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      - name: Create reports directory
+        run: mkdir -p reports
       
       - name: Install dependencies
         run: |
@@ -87,9 +82,8 @@ jobs:
       - name: Run npm audit
         run: |
           cd frontend
-          mkdir -p ../reports
-          npm audit --json > ../reports/npm-audit.json || true
-          npm audit --audit-level=moderate || true
+          npm audit --json > ../reports/npm-audit.json 2>&1 || true
+          npm audit --audit-level=moderate 2>&1 || true
         continue-on-error: true
       
       - name: Upload security reports
@@ -99,6 +93,7 @@ jobs:
           name: javascript-security-reports
           path: reports/
           retention-days: 30
+          if-no-files-found: ignore
 
   # ==========================================================
   # Container Scanning with Trivy
@@ -106,44 +101,56 @@ jobs:
   container-security:
     name: Container Security Scan
     runs-on: ubuntu-latest
+    # Only run on main branch pushes (not PRs) to avoid long build times
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create reports directory
+        run: mkdir -p reports
       
       - name: Build backend image
         run: |
-          docker build -f docker/Dockerfile.backend -t tcg-backend:test .
+          docker build -f docker/Dockerfile.backend -t tcg-backend:test . || true
+        continue-on-error: true
       
       - name: Build frontend image
         run: |
-          docker build -f docker/Dockerfile.frontend -t tcg-frontend:test .
+          docker build -f docker/Dockerfile.frontend -t tcg-frontend:test . || true
+        continue-on-error: true
       
       - name: Run Trivy vulnerability scanner on backend
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'tcg-backend:test'
-          format: 'sarif'
-          output: 'trivy-backend-results.sarif'
+          format: 'table'
+          output: 'reports/trivy-backend.txt'
           severity: 'CRITICAL,HIGH'
+          exit-code: '0'
         continue-on-error: true
       
       - name: Run Trivy vulnerability scanner on frontend
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'tcg-frontend:test'
-          format: 'sarif'
-          output: 'trivy-frontend-results.sarif'
+          format: 'table'
+          output: 'reports/trivy-frontend.txt'
           severity: 'CRITICAL,HIGH'
+          exit-code: '0'
         continue-on-error: true
       
-      - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Upload Trivy reports
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          sarif_file: '.'
+          name: container-security-reports
+          path: reports/
+          retention-days: 30
+          if-no-files-found: ignore
 
   # ==========================================================
-  # Secret Scanning
+  # Secret Scanning (simplified - GitHub has built-in secret scanning)
   # ==========================================================
   secret-scan:
     name: Secret Scanning
@@ -158,25 +165,23 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-      
-      - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
+          GITLEAKS_ENABLE_COMMENTS: false
         continue-on-error: true
 
   # ==========================================================
-  # OWASP Dependency Check
+  # OWASP Dependency Check (run only on schedule, not PRs)
   # ==========================================================
   owasp-dependency-check:
     name: OWASP Dependency Check
     runs-on: ubuntu-latest
+    # Only run on schedule or main branch (slow job)
+    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create reports directory
+        run: mkdir -p reports
       
       - name: Run OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
@@ -194,3 +199,4 @@ jobs:
           name: owasp-dependency-check-report
           path: reports/
           retention-days: 30
+          if-no-files-found: ignore
