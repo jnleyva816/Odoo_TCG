@@ -28,6 +28,8 @@ dependencies = [
     # Background tasks
     "celery[redis]>=5.3.0",
     "redis>=5.0.0",
+    # PostgreSQL async driver for price history
+    "asyncpg>=0.29.0",
 ]
 
 [project.optional-dependencies]

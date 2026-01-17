@@ -372,6 +372,49 @@ def barcodes_verify(set_code):
 
 
 # =============================================================================
+# PRICE HISTORY COMMAND
+# =============================================================================
+
+
+@main.command(name="price-history")
+@click.argument("sku")
+@click.option("--limit", default=30, type=int, help="Number of price points to show")
+def price_history_cmd(sku, limit):
+    """
+    View price history for a card.
+
+    SKU: The product SKU (e.g., sv09-001, sv09-001-holo)
+
+    Examples:
+        tcg price-history sv09-001
+        tcg price-history sv09-001-holo --limit 10
+    """
+    from .price_history import get_price_history
+
+    history = get_price_history(sku.lower(), limit=limit)
+
+    if not history:
+        console.print(f"[yellow]No price history found for {sku}[/yellow]")
+        console.print("[dim]Price history is recorded when importing or syncing sets.[/dim]")
+        return
+
+    console.print(f"[bold]Price history for {sku.upper()}[/bold]\n")
+    console.print(f"{'Date':<20} {'Price':>10} {'Low':>10} {'Market':>10}")
+    console.print("-" * 55)
+
+    for record in history:
+        date = (
+            record["recorded_at"].strftime("%Y-%m-%d %H:%M") if record.get("recorded_at") else "N/A"
+        )
+        price = f"${record['price']:.2f}" if record.get("price") else "-"
+        low = f"${record['low_price']:.2f}" if record.get("low_price") else "-"
+        market = f"${record['market_price']:.2f}" if record.get("market_price") else "-"
+        console.print(f"{date:<20} {price:>10} {low:>10} {market:>10}")
+
+    console.print(f"\n[dim]Showing {len(history)} of {limit} requested records[/dim]")
+
+
+# =============================================================================
 # STATUS COMMAND
 # =============================================================================
 

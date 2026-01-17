@@ -26,6 +26,7 @@ from .routers import (
     settings_router,
     vault_router,
 )
+from .routers.price_history import router as price_history_router
 from .services import get_odoo_service
 
 
@@ -49,6 +50,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  Odoo connection failed: {e}")
         print("   Server will retry on first request")
+
+    # Initialize price history table
+    print("📊 Initializing price history database...")
+    try:
+        from .services.price_history import init_price_history_table
+
+        await init_price_history_table()
+        print("✅ Price history table ready")
+    except Exception as e:
+        print(f"⚠️  Price history init failed: {e}")
+        print("   Price history will not be available")
 
     yield
 
@@ -144,6 +156,13 @@ def create_app() -> FastAPI:
 
     # Settings router - mixed auth (features endpoint is public)
     app.include_router(settings_router, prefix="/api")
+
+    # Price history router
+    app.include_router(
+        price_history_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
 
     @app.get("/api/health")
     async def health_check():

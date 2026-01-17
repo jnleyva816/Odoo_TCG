@@ -77,6 +77,13 @@ class Settings(BaseSettings):
     meili_url: str = "http://localhost:7700"
     meili_master_key: str = ""  # Set in production!
 
+    # PostgreSQL (for price history - uses same DB as Odoo)
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "odoo"
+    postgres_user: str = "odoo"
+    postgres_password: str = "odoo"
+
 
 @lru_cache
 def get_settings() -> Settings:

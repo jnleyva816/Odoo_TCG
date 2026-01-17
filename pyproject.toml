@@ -35,6 +35,7 @@ dependencies = [
     "flask>=3.0.0",
     "flask-cors>=4.0.0",
     "brother-ql>=0.9.4",
+    "psycopg2-binary>=2.9.0",  # For price history recording
 ]
 
 [project.optional-dependencies]

@@ -37,48 +37,122 @@ SET_CODE_ALIASES = {
     # SCARLET & VIOLET ERA - Main Sets
     # ============================================================
     "sv10": 24269,  # SV10: Destined Rivals
-    "dri": 24269,   # SV10: Destined Rivals (official abbr)
+    "dri": 24269,  # SV10: Destined Rivals (official abbr)
     "sv09": 24073,  # SV09: Journey Together
-    "jtg": 24073,   # SV09: Journey Together (official abbr)
+    "jtg": 24073,  # SV09: Journey Together (official abbr)
     "sv08": 23651,  # SV08: Surging Sparks
-    "ssp": 23651,   # SV08: Surging Sparks (official abbr)
+    "ssp": 23651,  # SV08: Surging Sparks (official abbr)
     "sv07": 23537,  # SV07: Stellar Crown
-    "scr": 23537,   # SV07: Stellar Crown (official abbr)
+    "scr": 23537,  # SV07: Stellar Crown (official abbr)
     "sv06": 23473,  # SV06: Twilight Masquerade
-    "twm": 23473,   # SV06: Twilight Masquerade (official abbr)
+    "twm": 23473,  # SV06: Twilight Masquerade (official abbr)
     "sv05": 23381,  # SV05: Temporal Forces
-    "tef": 23381,   # SV05: Temporal Forces (official abbr)
+    "tef": 23381,  # SV05: Temporal Forces (official abbr)
     "sv04": 23286,  # SV04: Paradox Rift
-    "par": 23286,   # SV04: Paradox Rift (official abbr)
+    "par": 23286,  # SV04: Paradox Rift (official abbr)
     "sv03": 23228,  # SV03: Obsidian Flames
-    "obf": 23228,   # SV03: Obsidian Flames (official abbr)
+    "obf": 23228,  # SV03: Obsidian Flames (official abbr)
     "sv02": 23120,  # SV02: Paldea Evolved
-    "pal": 23120,   # SV02: Paldea Evolved (official abbr)
+    "pal": 23120,  # SV02: Paldea Evolved (official abbr)
     "sv01": 22873,  # SV01: Scarlet & Violet Base Set
-    "svi": 22873,   # SV01: Scarlet & Violet Base Set (official abbr)
+    "svi": 22873,  # SV01: Scarlet & Violet Base Set (official abbr)
     # ============================================================
     # SCARLET & VIOLET ERA - Special Sets
     # ============================================================
-    "pre": 23821,   # SV: Prismatic Evolutions
-    "sfa": 23529,   # SV: Shrouded Fable
-    "paf": 23353,   # SV: Paldean Fates
-    "mew": 23237,   # SV: Scarlet & Violet 151
-    "svp": 22872,   # SV: Scarlet & Violet Promo Cards
-    "sve": 24382,   # SVE: Scarlet & Violet Energies
+    "pre": 23821,  # SV: Prismatic Evolutions
+    "sfa": 23529,  # SV: Shrouded Fable
+    "paf": 23353,  # SV: Paldean Fates
+    "mew": 23237,  # SV: Scarlet & Violet 151
+    "svp": 22872,  # SV: Scarlet & Violet Promo Cards
+    "sve": 24382,  # SVE: Scarlet & Violet Energies
     # Japanese exclusive SV sets
-    "wht": 24326,   # SV: White Flare (Japan)
-    "blk": 24325,   # SV: Black Bolt (Japan)
+    "wht": 24326,  # SV: White Flare (Japan)
+    "blk": 24325,  # SV: Black Bolt (Japan)
     # ============================================================
     # MEGA EVOLUTION ERA
     # ============================================================
     "me03": 24587,  # ME03: Perfect Order
     "me02": 24448,  # ME02: Phantasmal Flames
-    "pfl": 24448,   # ME02: Phantasmal Flames (official abbr)
+    "pfl": 24448,  # ME02: Phantasmal Flames (official abbr)
     "me01": 24380,  # ME01: Mega Evolution
-    "meg": 24380,   # ME01: Mega Evolution (official abbr)
-    "asc": 24541,   # ME: Ascended Heroes
-    "mep": 24451,   # ME: Mega Evolution Promo
-    "mee": 24461,   # MEE: Mega Evolution Energies
+    "meg": 24380,  # ME01: Mega Evolution (official abbr)
+    "asc": 24541,  # ME: Ascended Heroes
+    "mep": 24451,  # ME: Mega Evolution Promo
+    "mee": 24461,  # MEE: Mega Evolution Energies
+}
+
+# Set code to SKU prefix mapping (for existing products)
+# Maps download set code to the SKU prefix used in Odoo
+SKU_PREFIXES = {
+    # If your existing products use a different SKU prefix, map it here
+    "pre": "svpe",  # Prismatic Evolutions: svpe-001, svpe-002, etc.
+    "sfa": "svsf",  # Shrouded Fable
+    "paf": "svpf",  # Paldean Fates
+    "mew": "sv151",  # Scarlet & Violet 151
+    "svp": "svp",  # SV Promo Cards
+    "sve": "sve",  # SV Energies
+    # Main sets use their set code directly
+    "sv01": "sv01",
+    "sv02": "sv02",
+    "sv03": "sv03",
+    "sv04": "sv04",
+    "sv05": "sv05",
+    "sv06": "sv06",
+    "sv07": "sv07",
+    "sv08": "sv08",
+    "sv09": "sv09",
+    "sv10": "sv10",
+    # Mega Evolution
+    "me01": "me01",
+    "me02": "me02",
+    "me03": "me03",
+    "asc": "mea",
+    "mep": "mep",
+    "mee": "mee",
+}
+
+# Set code to full name mapping (avoids API call during import)
+# Format: "CODE: Full Name" to match Odoo category naming convention
+SET_NAMES = {
+    # Scarlet & Violet Main Sets
+    "sv10": "SV10: Destined Rivals",
+    "dri": "SV10: Destined Rivals",
+    "sv09": "SV09: Journey Together",
+    "jtg": "SV09: Journey Together",
+    "sv08": "SV08: Surging Sparks",
+    "ssp": "SV08: Surging Sparks",
+    "sv07": "SV07: Stellar Crown",
+    "scr": "SV07: Stellar Crown",
+    "sv06": "SV06: Twilight Masquerade",
+    "twm": "SV06: Twilight Masquerade",
+    "sv05": "SV05: Temporal Forces",
+    "tef": "SV05: Temporal Forces",
+    "sv04": "SV04: Paradox Rift",
+    "par": "SV04: Paradox Rift",
+    "sv03": "SV03: Obsidian Flames",
+    "obf": "SV03: Obsidian Flames",
+    "sv02": "SV02: Paldea Evolved",
+    "pal": "SV02: Paldea Evolved",
+    "sv01": "SV01: Scarlet & Violet",
+    "svi": "SV01: Scarlet & Violet",
+    # Scarlet & Violet Special Sets
+    "pre": "SVPE: Prismatic Evolutions",
+    "sfa": "SVSF: Shrouded Fable",
+    "paf": "SVPF: Paldean Fates",
+    "mew": "SV151: Scarlet & Violet 151",
+    "svp": "SVP: SV Promo Cards",
+    "sve": "SVE: SV Energies",
+    "wht": "SVWF: White Flare",
+    "blk": "SVBB: Black Bolt",
+    # Mega Evolution Era
+    "me03": "ME03: Perfect Order",
+    "me02": "ME02: Phantasmal Flames",
+    "pfl": "ME02: Phantasmal Flames",
+    "me01": "ME01: Mega Evolution",
+    "meg": "ME01: Mega Evolution",
+    "asc": "MEA: Ascended Heroes",
+    "mep": "MEP: Mega Evolution Promo",
+    "mee": "MEE: Mega Evolution Energies",
 }
 
 

@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
 from ..odoo_client import get_odoo_client
+from ..price_history import init_price_history_table, record_prices_batch
 from .download import CSV_BASE_DIR, SET_CODE_ALIASES, download_set_csv, get_all_pokemon_sets
 
 logger = logging.getLogger(__name__)
@@ -45,17 +46,27 @@ def discover_sets() -> dict[str, list[int]]:
     return dict(sets)
 
 
-def load_prices_from_csv(csv_path: Path) -> dict[str, float]:
+def _parse_price(value) -> float | None:
+    """Safely parse a price value."""
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def load_prices_from_csv(csv_path: Path) -> dict[str, dict]:
     """
     Load prices from a CSV file.
 
     Returns:
-        Dict mapping SKU to market price
+        Dict mapping SKU to price dict with all price fields
     """
     with open(csv_path, "r", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
-    price_lookup: dict[str, float] = {}
+    price_lookup: dict[str, dict] = {}
 
     for row in rows:
         ext_number = row.get("extNumber", "").strip()
@@ -83,14 +94,23 @@ def load_prices_from_csv(csv_path: Path) -> dict[str, float]:
         elif variant == "Reverse Holofoil":
             sku += "-reverse"
 
-        # Get price
-        try:
-            price = float(row.get("marketPrice") or row.get("midPrice") or 0)
-        except (ValueError, TypeError):
-            price = 0.0
+        # Get all price fields
+        low_price = _parse_price(row.get("lowPrice"))
+        mid_price = _parse_price(row.get("midPrice"))
+        high_price = _parse_price(row.get("highPrice"))
+        market_price = _parse_price(row.get("marketPrice"))
+
+        # Use market price or mid price as primary
+        price = market_price or mid_price or 0.0
 
         if price > 0:
-            price_lookup[sku] = price
+            price_lookup[sku] = {
+                "price": price,
+                "low_price": low_price,
+                "mid_price": mid_price,
+                "high_price": high_price,
+                "market_price": market_price,
+            }
 
     return price_lookup
 
@@ -157,7 +177,8 @@ def sync_set_prices(set_code: str, dry_run: bool = False, download_fresh: bool =
     stats = {"updated": 0, "skipped": 0, "not_found": 0, "errors": 0}
     changes = []
 
-    for sku, new_price in price_lookup.items():
+    for sku, price_data in price_lookup.items():
+        new_price = price_data["price"]
         product = odoo.get_product_by_sku(sku)
         if not product:
             stats["not_found"] += 1
@@ -171,13 +192,16 @@ def sync_set_prices(set_code: str, dry_run: bool = False, download_fresh: bool =
             continue
 
         # Track change
-        changes.append({
-            "sku": sku,
-            "name": product.get("name", ""),
-            "old": current_price,
-            "new": new_price,
-            "id": product["id"],
-        })
+        changes.append(
+            {
+                "sku": sku,
+                "name": product.get("name", ""),
+                "old": current_price,
+                "new": new_price,
+                "id": product["id"],
+                "price_data": price_data,  # Keep full price data for history
+            }
+        )
 
     # Show changes
     if changes:
@@ -186,8 +210,7 @@ def sync_set_prices(set_code: str, dry_run: bool = False, download_fresh: bool =
             diff = c["new"] - c["old"]
             color = "green" if diff > 0 else "red"
             console.print(
-                f"  {c['sku']}: ${c['old']:.2f} → ${c['new']:.2f} "
-                f"([{color}]{diff:+.2f}[/{color}])"
+                f"  {c['sku']}: ${c['old']:.2f} → ${c['new']:.2f} ([{color}]{diff:+.2f}[/{color}])"
             )
         if len(changes) > 20:
             console.print(f"  ... and {len(changes) - 20} more")
@@ -207,6 +230,23 @@ def sync_set_prices(set_code: str, dry_run: bool = False, download_fresh: bool =
         console.print(f"\n[yellow]DRY RUN - {len(changes)} prices would be updated[/yellow]")
     else:
         console.print("\n[green]No price changes needed[/green]")
+
+    # Record price history (silently skips if DB not accessible)
+    if price_lookup and not dry_run and init_price_history_table():
+        price_records = [
+            {
+                "sku": sku,
+                "price": data["price"],
+                "low_price": data.get("low_price"),
+                "mid_price": data.get("mid_price"),
+                "high_price": data.get("high_price"),
+                "market_price": data.get("market_price"),
+            }
+            for sku, data in price_lookup.items()
+        ]
+        recorded = record_prices_batch(price_records)
+        if recorded > 0:
+            console.print(f"[green]Recorded {recorded} price history entries[/green]")
 
     return stats
 
