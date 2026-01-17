@@ -58,10 +58,21 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
   const stockMutation = useMutation({
     mutationFn: adjustStock,
     onSuccess: () => {
+      // Invalidate all related queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ['card', selectedVariantId] })
       queryClient.invalidateQueries({ queryKey: ['card-variants', cardId] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
-      queryClient.invalidateQueries({ queryKey: ['set-cards'] })
+      // Use predicate to match all set-cards queries regardless of setId
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'set-cards'
+      })
+      // Also invalidate card search results and dashboard stats
+      queryClient.invalidateQueries({ queryKey: ['card-search'] })
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'inventory-total' || 
+          query.queryKey[0] === 'inventory-instock'
+      })
     },
   })
 

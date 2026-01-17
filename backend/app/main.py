@@ -79,8 +79,8 @@ def create_app() -> FastAPI:
     app.add_middleware(
         RateLimitMiddleware,
         redis_url=settings.redis_url,
-        requests_per_minute=60,
-        burst_size=10,
+        requests_per_minute=1200,  # 20 requests/second
+        burst_size=300,  # Allow 300 rapid requests for page loads
     )
     app.add_middleware(RequestIDMiddleware)
 

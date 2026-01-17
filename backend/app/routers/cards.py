@@ -3,12 +3,16 @@
 import json
 from decimal import Decimal
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from ..auth.dependencies import get_current_user
 from ..models import Card, CardDetail, CardSearchResult, SetInfo
 from ..services import OdooService, get_odoo_service
+
+if TYPE_CHECKING:
+    from ..auth.models import User
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
 
@@ -107,22 +111,45 @@ async def get_card_by_sku(
 async def get_card_detail(
     card_id: int,
     odoo: OdooService = Depends(get_odoo_service),
+    current_user: "User" = Depends(get_current_user),
 ) -> CardDetail:
-    """Get detailed card information by ID."""
-    records = await odoo.read(
-        "product.product",
-        [card_id],
-        [
-            "id",
-            "default_code",
-            "name",
-            "qty_available",
-            "list_price",
-            "categ_id",
-            "barcode",
-            "image_256",
-        ],
-    )
+    """Get detailed card information by ID (warehouse-aware)."""
+    # Use warehouse-specific quantity if user has an active warehouse
+    warehouse_id = current_user.warehouse_id if current_user else None
+
+    if warehouse_id:
+        # Get product with warehouse-specific quantity
+        qty = await odoo.get_product_quantity_in_warehouse(card_id, warehouse_id)
+        records = await odoo.read(
+            "product.product",
+            [card_id],
+            [
+                "id",
+                "default_code",
+                "name",
+                "list_price",
+                "categ_id",
+                "barcode",
+                "image_256",
+            ],
+        )
+        if records:
+            records[0]["qty_available"] = qty
+    else:
+        records = await odoo.read(
+            "product.product",
+            [card_id],
+            [
+                "id",
+                "default_code",
+                "name",
+                "qty_available",
+                "list_price",
+                "categ_id",
+                "barcode",
+                "image_256",
+            ],
+        )
 
     if not records:
         raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")

@@ -92,8 +92,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         redis_url: str = "redis://localhost:6379/0",
-        requests_per_minute: int = 360,  # 6 requests/second average (tripled)
-        burst_size: int = 90,  # Allow 90 rapid requests (tripled)
+        requests_per_minute: int = 1200,  # 20 requests/second average
+        burst_size: int = 300,  # Allow 300 rapid requests (page loads)
     ):
         super().__init__(app)
         self.redis_url = redis_url
