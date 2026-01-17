@@ -88,6 +88,7 @@ export interface SetInfo {
   id: number
   name: string
   card_count: number
+  logo_url?: string | null
 }
 
 export interface LabelResponse {
@@ -111,7 +112,7 @@ export interface PrintResponse {
   error?: string
 }
 
-export interface SetInfo {
+export interface AvailableSetInfo {
   code: string
   name: string
   series: string | null
@@ -123,7 +124,7 @@ export interface SetInfo {
 }
 
 export interface SetListResponse {
-  sets: SetInfo[]
+  sets: AvailableSetInfo[]
   total: number
 }
 

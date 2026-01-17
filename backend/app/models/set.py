@@ -9,3 +9,4 @@ class SetInfo(BaseModel):
     id: int = Field(..., description="Odoo category ID")
     name: str = Field(..., description="Set name")
     card_count: int = Field(0, description="Number of cards in set")
+    logo_url: str | None = Field(None, description="Set logo URL from TCGdex")

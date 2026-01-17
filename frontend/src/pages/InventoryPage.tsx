@@ -196,8 +196,20 @@ export default function InventoryPage() {
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   {/* Set Icon/Logo */}
-                  <div className="aspect-square bg-gradient-to-br from-primary-500/10 to-primary-600/20 rounded-xl flex items-center justify-center mb-4 group-hover:from-primary-500/20 group-hover:to-primary-600/30 transition-colors">
-                    <Layers size={48} className="text-primary-500" />
+                  <div className="aspect-square bg-gradient-to-br from-primary-500/10 to-primary-600/20 rounded-xl flex items-center justify-center mb-4 group-hover:from-primary-500/20 group-hover:to-primary-600/30 transition-colors overflow-hidden">
+                    {set.logo_url ? (
+                      <img 
+                        src={set.logo_url} 
+                        alt={set.name}
+                        className="w-full h-full object-contain p-2"
+                        onError={(e) => {
+                          // Fallback to icon on error
+                          e.currentTarget.style.display = 'none'
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                        }}
+                      />
+                    ) : null}
+                    <Layers size={48} className={`text-primary-500 ${set.logo_url ? 'hidden' : ''}`} />
                   </div>
 
                   {/* Set Info */}
@@ -236,8 +248,19 @@ export default function InventoryPage() {
                     >
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-primary-500/10 to-primary-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <Layers size={24} className="text-primary-500" />
+                          <div className="w-12 h-12 bg-gradient-to-br from-primary-500/10 to-primary-600/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {set.logo_url ? (
+                              <img 
+                                src={set.logo_url} 
+                                alt={set.name}
+                                className="w-full h-full object-contain p-1"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                                }}
+                              />
+                            ) : null}
+                            <Layers size={24} className={`text-primary-500 ${set.logo_url ? 'hidden' : ''}`} />
                           </div>
                           <span className="font-medium text-surface-900 dark:text-white">
                             {set.name}

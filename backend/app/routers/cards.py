@@ -1,6 +1,8 @@
 """Card search and detail endpoints."""
 
+import json
 from decimal import Decimal
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,6 +11,36 @@ from ..models import Card, CardDetail, CardSearchResult, SetInfo
 from ..services import OdooService, get_odoo_service
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
+
+# Load static logo mapping from JSON file
+_logo_mapping: dict[str, str] = {}
+_logo_file = Path(__file__).parent.parent / "data" / "set_logos.json"
+if _logo_file.exists():
+    with open(_logo_file) as f:
+        _logo_mapping = json.load(f)
+
+
+def get_logo_for_set(set_name: str) -> str | None:
+    """Get logo URL for a set by name from static mapping."""
+    name_lower = set_name.lower()
+
+    # Remove common prefixes like "SV03: " for matching
+    clean_name = name_lower
+    if ": " in clean_name:
+        clean_name = clean_name.split(": ", 1)[1]
+
+    # Try exact match
+    if name_lower in _logo_mapping:
+        return _logo_mapping[name_lower]
+    if clean_name in _logo_mapping:
+        return _logo_mapping[clean_name]
+
+    # Fuzzy match
+    for cached_name, logo in _logo_mapping.items():
+        if clean_name in cached_name or cached_name in clean_name:
+            return logo
+
+    return None
 
 
 def _odoo_str(value: Any) -> str | None:
@@ -102,7 +134,7 @@ async def get_card_detail(
 async def get_sets(
     odoo: OdooService = Depends(get_odoo_service),
 ) -> list[SetInfo]:
-    """Get all card sets (categories)."""
+    """Get all card sets (categories) with logos."""
     records = await odoo.get_sets()
 
     return [
@@ -110,6 +142,7 @@ async def get_sets(
             id=r["id"],
             name=r.get("name") or "",
             card_count=r.get("product_count") or 0,
+            logo_url=get_logo_for_set(r.get("name") or ""),
         )
         for r in records
     ]
