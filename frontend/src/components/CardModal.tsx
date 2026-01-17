@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Plus, Minus, Printer, Loader2, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Plus, Minus, Printer, Loader2, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getCard, adjustStock, getPrinterStatus, printLabel, getPrinterPreviewUrl, getCardVariants } from '../api/client'
 import CardImage from './CardImage'
@@ -32,6 +32,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
   const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle')
   const [printMessage, setPrintMessage] = useState('')
   const [selectedVariantId, setSelectedVariantId] = useState<number>(cardId)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Fetch card variants
   const { data: variants = [], isLoading: variantsLoading } = useQuery({
@@ -195,12 +196,48 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
         </div>
       )}
 
+      {/* Fullscreen Image Overlay */}
+      {isFullscreen && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-pointer"
+          onClick={() => setIsFullscreen(false)}
+        >
+          <button
+            onClick={() => setIsFullscreen(false)}
+            className="absolute top-4 right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10"
+          >
+            <Minimize2 size={24} />
+          </button>
+          <div className="max-w-[95vw] max-h-[95vh] overflow-hidden rounded-xl shadow-2xl">
+            <CardImage 
+              productId={selectedVariantId} 
+              alt={card.name} 
+              size="image_1920" 
+              className="max-w-full max-h-[95vh] object-contain" 
+            />
+          </div>
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">
+            Click anywhere to close
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6">
         {/* Card Image - native resolution, centered with contrasting background */}
         <div className="flex justify-center items-center">
-          <div className="bg-black dark:bg-white rounded-lg md:rounded-xl p-2 md:p-4 shadow-lg">
+          <div 
+            className="bg-black dark:bg-white rounded-lg md:rounded-xl p-2 md:p-4 shadow-lg relative group cursor-pointer"
+            onClick={() => setIsFullscreen(true)}
+          >
             <div className="w-[120px] h-[167px] md:w-[200px] md:h-[279px] overflow-hidden rounded-md md:rounded-lg">
               <CardImage productId={selectedVariantId} alt={card.name} size="image_256" className="w-full h-full" />
+            </div>
+            {/* Fullscreen hint overlay */}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg md:rounded-xl">
+              <Maximize2 
+                size={32} 
+                className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" 
+              />
             </div>
           </div>
         </div>
