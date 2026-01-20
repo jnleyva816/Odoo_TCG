@@ -10,7 +10,7 @@ from typing import Any
 
 from ..models.portfolio import PortfolioStats, PortfolioSummary, TopMover
 from ..services import get_odoo_service
-from ..services.price_history import get_latest_prices, get_pool
+from ..services.price_history import get_pool
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +211,6 @@ async def get_top_movers(
     now = datetime.utcnow()
 
     # Get current and 24h ago prices
-    current_prices = {p["default_code"]: p["list_price"] for p in products if p.get("default_code")}
     historical_prices = await get_prices_at_date(skus, now - timedelta(hours=24))
 
     # Calculate changes
@@ -250,8 +249,15 @@ async def get_top_movers(
             )
 
     # Sort and split
-    gainers = sorted([m for m in movers if m.direction == "up"], key=lambda x: x.percent_change_24h, reverse=True)[:limit]
-    losers = sorted([m for m in movers if m.direction == "down"], key=lambda x: x.percent_change_24h)[:limit]
+    gainers = sorted(
+        [m for m in movers if m.direction == "up"],
+        key=lambda x: x.percent_change_24h,
+        reverse=True,
+    )[:limit]
+    losers = sorted(
+        [m for m in movers if m.direction == "down"],
+        key=lambda x: x.percent_change_24h,
+    )[:limit]
 
     return gainers, losers
 

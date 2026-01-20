@@ -92,7 +92,7 @@ export default function PortfolioDashboardPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [historyDays, setHistoryDays] = useState(30)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setError(null)
 
@@ -121,13 +121,13 @@ export default function PortfolioDashboardPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [historyDays])
 
   useEffect(() => {
     if (features.portfolio_dashboard) {
       fetchData()
     }
-  }, [features.portfolio_dashboard, historyDays])
+  }, [features.portfolio_dashboard, historyDays, fetchData])
 
   const handleRefresh = async () => {
     setRefreshing(true)
