@@ -7,7 +7,7 @@
  * - Top Movers widget (gainers/losers)
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useFeatures } from '../contexts/FeaturesContext'
 import {
   AreaChart,

@@ -73,7 +73,7 @@ async def get_stats(
 )
 async def get_value_history(
     days: int = Query(30, ge=7, le=365),
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
     """Get portfolio value over time for charting.
 
@@ -96,7 +96,7 @@ async def get_value_history(
 async def get_movers(
     direction: str = Query("both", pattern="^(up|down|both)$"),
     limit: int = Query(10, ge=1, le=50),
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
     """Get cards with biggest price movements in last 24h.
 
@@ -123,7 +123,7 @@ async def get_movers(
 )
 async def get_top_cards(
     limit: int = Query(10, ge=1, le=50),
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
     """Get top valued cards in stock.
 
@@ -141,7 +141,7 @@ async def get_top_cards(
 )
 async def get_cost_basis(
     product_id: int | None = None,
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
     """Get cost basis entries for the current user.
 
@@ -159,7 +159,7 @@ async def get_cost_basis(
 )
 async def add_cost_basis(
     entry: CostBasisInput,
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
     """Add a cost basis entry for tracking purchase price.
 
@@ -181,7 +181,7 @@ async def add_cost_basis(
 )
 async def delete_cost_basis(
     entry_id: int,
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
     """Delete a cost basis entry."""
     # TODO: Implement database delete
@@ -193,7 +193,7 @@ async def delete_cost_basis(
     dependencies=[Depends(check_feature_enabled)],
 )
 async def refresh_portfolio_stats(
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
     """Manually trigger a portfolio stats refresh.
 

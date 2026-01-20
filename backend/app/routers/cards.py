@@ -66,6 +66,9 @@ def _record_to_card_detail(record: dict[str, Any]) -> CardDetail:
         has_image=bool(record.get("image_256")),
         barcode=_odoo_str(record.get("barcode")),
         image_url=f"/api/images/{record['id']}",
+        variant=None,
+        card_number=None,
+        rarity=None,
     )
 
 
