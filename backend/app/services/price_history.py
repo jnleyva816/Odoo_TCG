@@ -26,6 +26,8 @@ async def get_pool() -> asyncpg.Pool:
             password=settings.postgres_password,
             min_size=1,
             max_size=10,
+            timeout=5.0,  # Connection timeout in seconds
+            command_timeout=10.0,  # Query timeout
         )
     return _pool
 

@@ -3,40 +3,40 @@
 @tailwind utilities;
 
 /* =============================================================
-   TCG INVENTORY - MODERN DESIGN SYSTEM
-   Color Palette: Red / White / Dark Gray
-   Style: Modern, sleek, friendly rounded corners
+   TCG INVENTORY - PREMIUM DESIGN SYSTEM
+   Color Palette: Vibrant Red / Deep Carbon
+   Style: Glassmorphism, spacious, fluid
    ============================================================= */
 
 :root {
   /* Core colors - Light mode */
   --color-bg: #fafafa;
   --color-surface: #ffffff;
-  --color-surface-alt: #f4f4f5;
+  --color-surface-hover: #f4f4f5;
   --color-border: #e4e4e7;
   --color-text: #18181b;
   --color-text-muted: #52525b;
   --color-text-subtle: #71717a;
-  
-  /* Primary: Red */
-  --color-primary: #ef4444;
-  --color-primary-hover: #dc2626;
-  --color-primary-soft: #fef2f2;
+
+  /* Primary: Ruby Red */
+  --color-primary: #f43f5e;
+  --color-primary-hover: #e11d48;
+  --color-primary-soft: #fff1f2;
 }
 
 .dark {
-  /* Core colors - Dark mode */
+  /* Core colors - Dark mode (Deep Zinc) */
   --color-bg: #09090b;
   --color-surface: #18181b;
-  --color-surface-alt: #27272a;
-  --color-border: #3f3f46;
+  --color-surface-hover: #27272a;
+  --color-border: #27272a;
   --color-text: #fafafa;
   --color-text-muted: #a1a1aa;
   --color-text-subtle: #71717a;
-  
-  --color-primary: #ef4444;
-  --color-primary-hover: #f87171;
-  --color-primary-soft: #450a0a;
+
+  --color-primary: #f43f5e;
+  --color-primary-hover: #fb7185;
+  --color-primary-soft: #4c0519;
 }
 
 /* =============================================================
@@ -59,16 +59,18 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   min-height: 100vh;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-x: hidden;
 }
 
 /* =============================================================
-   SCROLLBAR - Subtle, modern
+   SCROLLBAR - Minimal & Sleek
    ============================================================= */
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -77,7 +79,8 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 4px;
+  border-radius: 9999px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -85,150 +88,47 @@ body {
 }
 
 /* =============================================================
-   FOCUS & SELECTION
-   ============================================================= */
-
-*:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-::selection {
-  background: var(--color-primary);
-  color: white;
-}
-
-/* =============================================================
-   IMAGES
-   ============================================================= */
-
-img {
-  image-rendering: high-quality;
-  -ms-interpolation-mode: bicubic;
-}
-
-.card-image-placeholder {
-  background: linear-gradient(
-    90deg,
-    var(--color-surface) 0%,
-    var(--color-surface-alt) 50%,
-    var(--color-surface) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* =============================================================
    COMPONENT LAYER
    ============================================================= */
 
 @layer components {
+
   /* -------------------------------------------------------------
-     BUTTONS - Modern, friendly
+     BUTTONS - Premium Interactive
      ------------------------------------------------------------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 
-           px-4 py-2.5 font-semibold text-sm
-           rounded-lg
-           transition-all duration-200 ease-out
-           disabled:opacity-50 disabled:cursor-not-allowed
-           active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-sm rounded-lg transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] outline-none;
   }
 
   .btn-primary {
-    @apply bg-primary-500 text-white
-           hover:bg-primary-600
-           shadow-sm hover:shadow-md;
+    @apply bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/25 border border-primary-500/50;
   }
 
   .btn-secondary {
-    @apply bg-surface-100 dark:bg-surface-800 
-           text-surface-700 dark:text-surface-200
-           hover:bg-surface-200 dark:hover:bg-surface-700
-           border border-surface-200 dark:border-surface-700;
+    @apply bg-surface-100 dark:bg-surface-800 text-surface-900 dark:text-surface-50 hover:bg-surface-200 dark:hover:bg-surface-700 border border-surface-200 dark:border-surface-700;
   }
 
   .btn-ghost {
-    @apply bg-transparent 
-           text-surface-600 dark:text-surface-400
-           hover:bg-surface-100 dark:hover:bg-surface-800;
+    @apply bg-transparent text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800/50;
   }
 
-  .btn-danger {
-    @apply bg-red-500 text-white hover:bg-red-600;
-  }
-
-  /* -------------------------------------------------------------
-     INPUTS - Clean, modern
-     ------------------------------------------------------------- */
-  .input {
-    @apply w-full px-4 py-2.5 
-           bg-white dark:bg-surface-900 
-           border border-surface-200 dark:border-surface-700
-           rounded-lg
-           text-surface-900 dark:text-surface-100
-           placeholder:text-surface-400 dark:placeholder:text-surface-500
-           focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
-           transition-all duration-200;
-  }
-
-  .input-lg {
-    @apply input text-lg py-3;
-  }
-
-  .select {
-    @apply input appearance-none cursor-pointer pr-10
-           bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23a1a1aa%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')]
-           bg-no-repeat bg-[center_right_0.75rem];
-  }
-
-  /* -------------------------------------------------------------
-     CARDS - Soft shadows, rounded
-     ------------------------------------------------------------- */
-  .card {
-    @apply bg-white dark:bg-surface-900 
-           border border-surface-200 dark:border-surface-800
-           rounded-xl
-           transition-all duration-200;
-  }
-
-  .card-elevated {
-    @apply card shadow-soft hover:shadow-soft-lg;
+  .btn-success {
+    @apply bg-accent-500 text-white hover:bg-accent-600 shadow-lg shadow-accent-500/25 border border-accent-500/50;
   }
 
   /* -------------------------------------------------------------
      BADGES - Pill-shaped
      ------------------------------------------------------------- */
   .badge {
-    @apply inline-flex items-center px-2.5 py-1
-           text-xs font-semibold
-           rounded-full;
+    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full;
   }
 
   .badge-primary {
-    @apply bg-primary-500 text-white;
+    @apply bg-primary-500 text-white shadow-sm shadow-primary-500/20;
   }
 
   .badge-outline {
-    @apply bg-surface-100 dark:bg-surface-800 
-           text-surface-600 dark:text-surface-300
-           border border-surface-200 dark:border-surface-700;
-  }
-
-  .badge-success {
-    background-color: rgb(34 197 94 / 0.1);
-    color: #22c55e;
-  }
-
-  .badge-error {
-    background-color: rgb(239 68 68 / 0.1);
-    color: #ef4444;
+    @apply bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-700;
   }
 
   /* -------------------------------------------------------------
@@ -242,26 +142,57 @@ img {
      SECTION HEADERS
      ------------------------------------------------------------- */
   .section-title {
-    @apply text-xs font-semibold uppercase tracking-wider 
-           text-surface-500
-           mb-3;
+    @apply text-xs font-bold uppercase tracking-widest text-surface-500 mb-4;
+  }
+
+  /* -------------------------------------------------------------
+     INPUTS - Glassy & Clean
+     ------------------------------------------------------------- */
+  .input {
+    @apply w-full px-4 py-2.5 bg-white dark:bg-surface-900/50 border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all duration-200;
+  }
+
+  .input-lg {
+    @apply input px-5 py-4 text-lg rounded-2xl;
+  }
+
+  /* -------------------------------------------------------------
+     CARDS - Depth & Texture
+     ------------------------------------------------------------- */
+  .card {
+    @apply bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl transition-all duration-200;
   }
 }
 
 /* =============================================================
-   UTILITY LAYER
+   UTILITIES & EFFECTS
    ============================================================= */
 
 @layer utilities {
-  /* Text styles */
   .text-display {
-    @apply font-semibold tracking-tight;
+    @apply font-display font-bold tracking-tight;
   }
 
-  /* Stagger animation delays */
-  .stagger-1 { animation-delay: 50ms; }
-  .stagger-2 { animation-delay: 100ms; }
-  .stagger-3 { animation-delay: 150ms; }
-  .stagger-4 { animation-delay: 200ms; }
-  .stagger-5 { animation-delay: 250ms; }
+  .glass {
+    @apply bg-white/70 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
+  }
+
+  .glass-card {
+    @apply bg-surface-50/80 dark:bg-surface-900/60 backdrop-blur-md border border-surface-200/50 dark:border-surface-800/50 dark:shadow-none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Premium Gradients */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-white to-white/60;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-br from-primary-500 to-primary-700;
+  }
 }

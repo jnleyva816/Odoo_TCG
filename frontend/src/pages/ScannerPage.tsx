@@ -26,7 +26,7 @@ export default function ScannerPage() {
       setResults([])
       return
     }
-    
+
     setSearching(true)
     try {
       const data = await searchCards(q, 20)
@@ -41,11 +41,11 @@ export default function ScannerPage() {
 
   const handleInputChange = (value: string) => {
     setQuery(value)
-    
+
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
     }
-    
+
     debounceRef.current = setTimeout(() => {
       performSearch(value)
     }, 300)
@@ -63,7 +63,7 @@ export default function ScannerPage() {
       }
       return [...prev, { card, quantity: 1 }]
     })
-    
+
     setQuery('')
     setResults([])
     inputRef.current?.focus()
@@ -126,7 +126,7 @@ export default function ScannerPage() {
     <div className="max-w-6xl mx-auto px-4 py-6 lg:py-8">
       <div className="grid lg:grid-cols-[1fr,360px] gap-6 lg:gap-8">
         {/* Search Section */}
-        <div className="animate-slide-in-up">
+        <div className="animate-slide-up">
           <h1 className="text-2xl font-semibold text-surface-900 dark:text-white mb-6">
             Card Scanner
           </h1>
@@ -179,7 +179,7 @@ export default function ScannerPage() {
                     size="image_128"
                     className="w-12 h-16 rounded-lg flex-shrink-0"
                   />
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-surface-900 dark:text-white truncate">
                       {card.name}
@@ -240,78 +240,77 @@ export default function ScannerPage() {
                   {queue.map(({ card, quantity }, index) => {
                     const isProcessed = processedItems.has(card.id)
                     return (
-                    <div
-                      key={card.id}
-                      className={`flex items-center gap-3 p-3 border-b border-surface-100 dark:border-surface-800 animate-fade-in ${
-                        isProcessed ? 'bg-green-50 dark:bg-green-900/20' : ''
-                      }`}
-                      style={{ animationDelay: `${index * 30}ms` }}
-                    >
-                      <div className="relative">
-                        <CardImage
-                          productId={card.id}
-                          alt={card.name}
-                          size="image_128"
-                          className="w-10 h-14 rounded flex-shrink-0"
-                        />
-                        {isProcessed && (
-                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                            <Check size={12} className="text-white" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-surface-900 dark:text-white truncate">
-                          {card.name}
-                        </div>
-                        <div className="text-xs text-surface-500 font-mono">
-                          {card.sku}
-                        </div>
-                        {isProcessed && (
-                          <div className="text-xs text-green-600 dark:text-green-400">
-                            Added to inventory
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center bg-surface-100 dark:bg-surface-800 rounded-lg">
-                        <button
-                          onClick={() => updateQueueQuantity(card.id, -1)}
-                          className="p-2 text-surface-500 hover:text-primary-500 transition-colors"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="w-8 text-center font-mono text-sm font-medium text-surface-900 dark:text-white">
-                          {quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQueueQuantity(card.id, 1)}
-                          className="p-2 text-surface-500 hover:text-primary-500 transition-colors"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={() => removeFromQueue(card.id)}
-                        className="p-1.5 text-surface-400 hover:text-red-500 transition-colors"
+                      <div
+                        key={card.id}
+                        className={`flex items-center gap-3 p-3 border-b border-surface-100 dark:border-surface-800 animate-fade-in ${isProcessed ? 'bg-green-50 dark:bg-green-900/20' : ''
+                          }`}
+                        style={{ animationDelay: `${index * 30}ms` }}
                       >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  )})}
+                        <div className="relative">
+                          <CardImage
+                            productId={card.id}
+                            alt={card.name}
+                            size="image_128"
+                            className="w-10 h-14 rounded flex-shrink-0"
+                          />
+                          {isProcessed && (
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                              <Check size={12} className="text-white" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-surface-900 dark:text-white truncate">
+                            {card.name}
+                          </div>
+                          <div className="text-xs text-surface-500 font-mono">
+                            {card.sku}
+                          </div>
+                          {isProcessed && (
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                              Added to inventory
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center bg-surface-100 dark:bg-surface-800 rounded-lg">
+                          <button
+                            onClick={() => updateQueueQuantity(card.id, -1)}
+                            className="p-2 text-surface-500 hover:text-primary-500 transition-colors"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="w-8 text-center font-mono text-sm font-medium text-surface-900 dark:text-white">
+                            {quantity}
+                          </span>
+                          <button
+                            onClick={() => updateQueueQuantity(card.id, 1)}
+                            className="p-2 text-surface-500 hover:text-primary-500 transition-colors"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => removeFromQueue(card.id)}
+                          className="p-1.5 text-surface-400 hover:text-red-500 transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
 
                 <div className="p-4 space-y-2 border-t border-surface-200 dark:border-surface-800">
                   <button
                     onClick={() => processMutation.mutate()}
                     disabled={processMutation.isPending || queue.every(item => processedItems.has(item.card.id))}
-                    className={`btn w-full py-3 ${
-                      queue.every(item => processedItems.has(item.card.id))
+                    className={`btn w-full py-3 ${queue.every(item => processedItems.has(item.card.id))
                         ? 'btn-success bg-green-600 hover:bg-green-700'
                         : 'btn-primary'
-                    }`}
+                      }`}
                   >
                     {processMutation.isPending ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
