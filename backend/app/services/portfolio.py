@@ -282,10 +282,12 @@ async def get_portfolio_value_history(
     # If no historical prices available, return just today's value
     if not test_prices:
         current_value = await calculate_portfolio_value(products)
-        return [{
-            "date": now.strftime("%Y-%m-%d"),
-            "value": float(current_value),
-        }]
+        return [
+            {
+                "date": now.strftime("%Y-%m-%d"),
+                "value": float(current_value),
+            }
+        ]
 
     history = []
 
@@ -293,17 +295,17 @@ async def get_portfolio_value_history(
     for i in range(days, -1, -1):
         date = now - timedelta(days=i)
         value = await calculate_portfolio_value(products, date)
-        history.append({
-            "date": date.strftime("%Y-%m-%d"),
-            "value": float(value),
-        })
+        history.append(
+            {
+                "date": date.strftime("%Y-%m-%d"),
+                "value": float(value),
+            }
+        )
 
     return history
 
 
-async def get_top_valued_cards(
-    warehouse_id: int | None = None, limit: int = 10
-) -> list[dict]:
+async def get_top_valued_cards(warehouse_id: int | None = None, limit: int = 10) -> list[dict]:
     """
     Get top valued cards in stock, sorted by total value (price * quantity).
 
@@ -324,18 +326,19 @@ async def get_top_valued_cards(
             categ = p.get("categ_id")
             set_name = categ[1] if isinstance(categ, (list, tuple)) else ""
 
-            valued_cards.append({
-                "product_id": p["id"],
-                "name": p.get("name", ""),
-                "sku": p.get("default_code", ""),
-                "set_name": set_name,
-                "price": price,
-                "quantity": qty,
-                "total_value": total_value,
-            })
+            valued_cards.append(
+                {
+                    "product_id": p["id"],
+                    "name": p.get("name", ""),
+                    "sku": p.get("default_code", ""),
+                    "set_name": set_name,
+                    "price": price,
+                    "quantity": qty,
+                    "total_value": total_value,
+                }
+            )
 
     # Sort by total value descending
     valued_cards.sort(key=lambda x: x["total_value"], reverse=True)
 
     return valued_cards[:limit]
-
