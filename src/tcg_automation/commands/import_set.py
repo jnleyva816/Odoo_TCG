@@ -504,6 +504,4 @@ def import_all_sets(
     console.print(f"  Sets imported: {all_stats['sets']}")
     console.print(f"  Total created: {all_stats['created']}")
     console.print(f"  Total updated: {all_stats['updated']}")
-    console.print(f"  Total errors: {all_stats['errors']}")
-
-    return all_stats
+    console.print(f"  Total errors: {all_stats['errors']}")    return all_stats
