@@ -75,7 +75,9 @@ async def lifespan(app: FastAPI):
                   f"matcher: {scanner_status['matcher']}, hashes: {scanner_status['hash_count']})")
         else:
             print("⚠️  Card scanner partially initialized")
-            print(f"   Detector: {scanner_status['detector']}, Matcher: {scanner_status['matcher']}")
+            det = scanner_status['detector']
+            mat = scanner_status['matcher']
+            print(f"   Detector: {det}, Matcher: {mat}")
     except Exception as e:
         print(f"⚠️  Card scanner init failed: {e}")
         print("   Scanner will be unavailable until model/database are configured")
