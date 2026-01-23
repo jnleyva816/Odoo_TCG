@@ -1,14 +1,15 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Search, X, Plus, Minus, Printer, Loader2, Package, Check,
-  Camera, Upload, Zap, AlertCircle, RefreshCw
+  Camera, Upload, Zap, AlertCircle, RefreshCw, Smartphone
 } from 'lucide-react'
 import {
   searchCards, adjustStock, printLabel, Card,
   getScannerStatus, scanImage, scanBase64Image, CardMatch, ScanResult
 } from '../api/client'
 import CardImage from '../components/CardImage'
+import ScannerModal from '../components/ScannerModal'
 
 interface QueueItem {
   card: Card
@@ -41,6 +42,16 @@ export default function ScannerPage() {
   // Modal state for scan results
   const [showScanModal, setShowScanModal] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
+
+  // Mobile scanner modal state
+  const [showMobileScanner, setShowMobileScanner] = useState(false)
+
+  // Detect if we're on a mobile device
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (window.matchMedia && window.matchMedia('(max-width: 768px)').matches)
+  }, [])
 
   // Scanner status
   const { data: scannerStatus, isLoading: statusLoading } = useQuery({
@@ -299,6 +310,34 @@ export default function ScannerPage() {
     }
   }
 
+  // Handle capture from mobile scanner modal
+  const handleMobileScanCapture = async (imageData: string) => {
+    setScanning(true)
+    setScanError(null)
+    try {
+      const response = await scanBase64Image(imageData, false)
+      if (response.success) {
+        setScanResult(response.result)
+        if (response.result.matches.length > 0) {
+          setLastMatches(response.result.matches)
+          setShowMobileScanner(false) // Close scanner modal
+          setShowScanModal(true) // Show results modal
+        } else {
+          setScanError('No cards detected. Try adjusting the position or lighting.')
+          setShowMobileScanner(false)
+          setShowScanModal(true)
+        }
+      }
+    } catch (err) {
+      console.error('Mobile scan failed:', err)
+      setScanError('Scan failed. Please try again.')
+      setShowMobileScanner(false)
+      setShowScanModal(true)
+    } finally {
+      setScanning(false)
+    }
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -540,105 +579,149 @@ export default function ScannerPage() {
           {/* Camera Mode */}
           {mode === 'camera' && (
             <div className="space-y-4">
-              {/* Video / Upload Area */}
-              <div className="relative aspect-video bg-surface-900 rounded-xl overflow-hidden">
-                {/* Always render video element to ensure ref is available */}
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full object-cover ${cameraActive ? '' : 'hidden'}`}
-                />
-                {/* Card positioning guide - shown when camera is active but no detections yet */}
-                {cameraActive && !scanning && (!scanResult?.detections?.length) && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="border-2 border-dashed border-white/40 rounded-lg"
-                      style={{ width: '40%', aspectRatio: '2.5/3.5' }}>
-                      <div className="w-full h-full flex items-center justify-center text-white/60 text-sm text-center p-2">
-                        Position card here
-                      </div>
+              {/* Mobile: Show prominent button to open fullscreen scanner */}
+              {isMobile && (
+                <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl p-6 text-white">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-white/20 rounded-xl">
+                      <Smartphone size={28} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Mobile Scanner</h3>
+                      <p className="text-white/80 text-sm">Optimized for phone cameras</p>
                     </div>
                   </div>
-                )}
-                {cameraActive && scanning && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <Loader2 className="w-12 h-12 animate-spin text-white" />
-                  </div>
-                )}
-                {/* Detection overlay */}
-                {cameraActive && scanResult?.detections?.map((det, i) => (
-                  <div
-                    key={i}
-                    className="absolute border-2 border-green-500 bg-green-500/20 rounded"
-                    style={{
-                      left: `${(det.bbox[0] / (scanResult.image_size[0] || 1)) * 100}%`,
-                      top: `${(det.bbox[1] / (scanResult.image_size[1] || 1)) * 100}%`,
-                      width: `${(det.width / (scanResult.image_size[0] || 1)) * 100}%`,
-                      height: `${(det.height / (scanResult.image_size[1] || 1)) * 100}%`,
-                    }}
+                  <button
+                    onClick={() => setShowMobileScanner(true)}
+                    className="w-full py-4 bg-white text-primary-600 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
                   >
-                    <span className="absolute -top-5 left-0 text-xs bg-green-500 text-white px-1 rounded">
-                      {(det.confidence * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                ))}
-                {!cameraActive && (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-surface-400">
-                    <Camera size={64} className="mb-4" />
-                    <p className="text-lg mb-4">Camera not active</p>
-                    <div className="flex gap-3">
-                      <button onClick={startCamera} className="btn btn-primary">
-                        <Camera size={18} />
-                        Start Camera
-                      </button>
-                      <label className="btn btn-secondary cursor-pointer">
-                        <Upload size={18} />
-                        Upload Image
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                )}
-                <canvas ref={canvasRef} className="hidden" />
-              </div>
-
-              {/* Camera Controls */}
-              {cameraActive && (
-                <>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={scanCurrentFrame}
-                      disabled={scanning}
-                      className="btn btn-primary flex-1"
-                    >
-                      {scanning ? (
-                        <Loader2 size={18} className="animate-spin" />
-                      ) : (
-                        <Zap size={18} />
-                      )}
-                      Scan Now
-                    </button>
-                    <button
-                      onClick={toggleAutoScan}
-                      className={`btn ${autoScan ? 'btn-success' : 'btn-secondary'}`}
-                    >
-                      <RefreshCw size={18} className={autoScan ? 'animate-spin' : ''} />
-                      {autoScan ? 'Auto: ON' : 'Auto: OFF'}
-                    </button>
-                    <button onClick={stopCamera} className="btn btn-ghost">
-                      <X size={18} />
-                      Stop
-                    </button>
-                  </div>
-                  <p className="text-xs text-surface-500 text-center">
-                    Tip: Hold card flat, fill most of the frame, and avoid glare for best results
+                    <Camera size={24} />
+                    Open Scanner
+                  </button>
+                  <p className="text-white/70 text-xs text-center mt-3">
+                    Uses fullscreen camera with card alignment guide
                   </p>
+
+                  {/* Alternative: Upload image */}
+                  <div className="mt-4 pt-4 border-t border-white/20">
+                    <label className="w-full py-3 bg-white/10 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-white/20 transition-colors cursor-pointer">
+                      <Upload size={18} />
+                      Or Upload an Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop: Show inline camera view */}
+              {!isMobile && (
+                <>
+                  {/* Video / Upload Area */}
+                  <div className="relative aspect-video bg-surface-900 rounded-xl overflow-hidden">
+                    {/* Always render video element to ensure ref is available */}
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className={`w-full h-full object-cover ${cameraActive ? '' : 'hidden'}`}
+                    />
+                    {/* Card positioning guide - shown when camera is active but no detections yet */}
+                    {cameraActive && !scanning && (!scanResult?.detections?.length) && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="border-2 border-dashed border-white/40 rounded-lg"
+                          style={{ width: '40%', aspectRatio: '2.5/3.5' }}>
+                          <div className="w-full h-full flex items-center justify-center text-white/60 text-sm text-center p-2">
+                            Position card here
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {cameraActive && scanning && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <Loader2 className="w-12 h-12 animate-spin text-white" />
+                      </div>
+                    )}
+                    {/* Detection overlay */}
+                    {cameraActive && scanResult?.detections?.map((det, i) => (
+                      <div
+                        key={i}
+                        className="absolute border-2 border-green-500 bg-green-500/20 rounded"
+                        style={{
+                          left: `${(det.bbox[0] / (scanResult.image_size[0] || 1)) * 100}%`,
+                          top: `${(det.bbox[1] / (scanResult.image_size[1] || 1)) * 100}%`,
+                          width: `${(det.width / (scanResult.image_size[0] || 1)) * 100}%`,
+                          height: `${(det.height / (scanResult.image_size[1] || 1)) * 100}%`,
+                        }}
+                      >
+                        <span className="absolute -top-5 left-0 text-xs bg-green-500 text-white px-1 rounded">
+                          {(det.confidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    ))}
+                    {!cameraActive && (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-surface-400">
+                        <Camera size={64} className="mb-4" />
+                        <p className="text-lg mb-4">Camera not active</p>
+                        <div className="flex gap-3">
+                          <button onClick={startCamera} className="btn btn-primary">
+                            <Camera size={18} />
+                            Start Camera
+                          </button>
+                          <label className="btn btn-secondary cursor-pointer">
+                            <Upload size={18} />
+                            Upload Image
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                    <canvas ref={canvasRef} className="hidden" />
+                  </div>
+
+                  {/* Camera Controls */}
+                  {cameraActive && (
+                    <>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={scanCurrentFrame}
+                          disabled={scanning}
+                          className="btn btn-primary flex-1"
+                        >
+                          {scanning ? (
+                            <Loader2 size={18} className="animate-spin" />
+                          ) : (
+                            <Zap size={18} />
+                          )}
+                          Scan Now
+                        </button>
+                        <button
+                          onClick={toggleAutoScan}
+                          className={`btn ${autoScan ? 'btn-success' : 'btn-secondary'}`}
+                        >
+                          <RefreshCw size={18} className={autoScan ? 'animate-spin' : ''} />
+                          {autoScan ? 'Auto: ON' : 'Auto: OFF'}
+                        </button>
+                        <button onClick={stopCamera} className="btn btn-ghost">
+                          <X size={18} />
+                          Stop
+                        </button>
+                      </div>
+                      <p className="text-xs text-surface-500 text-center">
+                        Tip: Hold card flat, fill most of the frame, and avoid glare for best results
+                      </p>
+                    </>
+                  )}
                 </>
               )}
 
@@ -982,8 +1065,13 @@ export default function ScannerPage() {
               <button
                 onClick={() => {
                   closeScanModal()
-                  // Give a brief moment before allowing next scan
-                  setTimeout(() => scanCurrentFrame(), 100)
+                  if (isMobile) {
+                    // Reopen mobile scanner
+                    setTimeout(() => setShowMobileScanner(true), 100)
+                  } else if (cameraActive) {
+                    // Scan current frame on desktop
+                    setTimeout(() => scanCurrentFrame(), 100)
+                  }
                 }}
                 className="btn btn-ghost flex-1"
               >
@@ -994,6 +1082,14 @@ export default function ScannerPage() {
           </div>
         </div>
       )}
+
+      {/* Mobile Scanner Modal */}
+      <ScannerModal
+        isOpen={showMobileScanner}
+        onClose={() => setShowMobileScanner(false)}
+        onCapture={handleMobileScanCapture}
+        scanning={scanning}
+      />
     </div>
   )
 }
