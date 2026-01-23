@@ -1,0 +1,8 @@
+# Place your trained ONNX model here
+# Expected file: pokemon_card_detector.onnx
+#
+# To train the model:
+# 1. Use Kaggle notebook: ml/kaggle_notebook.ipynb
+# 2. Or run locally: python ml/train_yolo.py train
+# 3. Export: python ml/train_yolo.py export --weights path/to/best.pt
+# 4. Copy the .onnx file to this directory

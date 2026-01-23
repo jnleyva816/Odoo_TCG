@@ -115,5 +115,12 @@ result-*
 # Auth database
 auth.db
 *.db
+
+# Docker
 docker/docker-compose.override.yml
 caddy/
+
+# Machine Learning Data and Models
+ml/data/
+ml/venv/
+runs/

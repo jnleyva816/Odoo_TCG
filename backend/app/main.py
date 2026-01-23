@@ -21,6 +21,7 @@ from .routers import (
     inventory_router,
     labels_router,
     portfolio_router,
+    scanner_router,
     search_router,
     sets_router,
     settings_router,
@@ -61,6 +62,23 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  Price history init failed: {e}")
         print("   Price history will not be available")
+
+    # Initialize card scanner (ML model + hash database)
+    print("🔍 Initializing card scanner...")
+    try:
+        from .services.scanner import get_scanner_service
+
+        scanner = get_scanner_service()
+        scanner_status = await scanner.initialize()
+        if scanner_status["initialized"]:
+            print(f"✅ Card scanner ready (detector: {scanner_status['detector']}, "
+                  f"matcher: {scanner_status['matcher']}, hashes: {scanner_status['hash_count']})")
+        else:
+            print("⚠️  Card scanner partially initialized")
+            print(f"   Detector: {scanner_status['detector']}, Matcher: {scanner_status['matcher']}")
+    except Exception as e:
+        print(f"⚠️  Card scanner init failed: {e}")
+        print("   Scanner will be unavailable until model/database are configured")
 
     yield
 
@@ -160,6 +178,13 @@ def create_app() -> FastAPI:
     # Price history router
     app.include_router(
         price_history_router,
+        prefix="/api",
+        dependencies=[Depends(get_current_user)],
+    )
+
+    # Scanner router - requires authentication for most endpoints
+    app.include_router(
+        scanner_router,
         prefix="/api",
         dependencies=[Depends(get_current_user)],
     )

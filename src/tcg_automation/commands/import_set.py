@@ -497,9 +497,7 @@ def import_all_sets(
             all_stats["sets"] += 1
             all_stats["created"] += result.get("created", 0)
             all_stats["updated"] += result.get("updated", 0)
-            all_stats["errors"] += result.get("errors", 0)
-
-    console.print(f"\n{'=' * 60}")
+            all_stats["errors"] += result.get("errors", 0)    console.print(f"\n{'=' * 60}")
     console.print("[bold green]All imports complete![/bold green]")
     console.print(f"  Sets imported: {all_stats['sets']}")
     console.print(f"  Total created: {all_stats['created']}")

@@ -1,0 +1,29 @@
+# ML Training Requirements (Desktop/Kaggle)
+# Install with: pip install -r requirements.txt
+
+# YOLOv8 - Object Detection
+ultralytics>=8.3.0
+
+# ONNX Export
+onnx>=1.14.0
+onnxruntime>=1.16.0  # CPU inference
+# onnxruntime-gpu>=1.16.0  # Uncomment for GPU inference
+
+# Image Processing
+opencv-python>=4.8.0
+Pillow>=10.0.0
+imagehash>=4.3.1  # Perceptual hashing
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# HTTP/API
+httpx>=0.25.0
+aiofiles>=23.0.0
+
+# Progress bars
+tqdm>=4.66.0
+
+# Optional: Roboflow integration
+# roboflow>=1.1.0

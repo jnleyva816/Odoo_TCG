@@ -3,6 +3,7 @@
 from .cache import ImageCache
 from .odoo import OdooService, get_odoo_service
 from .printer import PrinterService, get_printer_service
+from .scanner import ScannerService, get_scanner_service
 from .search import SearchService, get_search_service
 
 __all__ = [
@@ -11,6 +12,8 @@ __all__ = [
     "ImageCache",
     "PrinterService",
     "get_printer_service",
+    "ScannerService",
+    "get_scanner_service",
     "SearchService",
     "get_search_service",
 ]

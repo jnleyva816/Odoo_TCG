@@ -384,3 +384,173 @@ export async function getImportStatus(setCode: string): Promise<ImportStatus> {
   if (!res.ok) throw new Error('Failed to get import status')
   return res.json()
 }
+
+// ============================================================================
+// Scanner API (ML-based card detection + identification)
+// ============================================================================
+
+export interface ScannerStatus {
+  ready: boolean
+  detector_loaded: boolean
+  matcher_loaded: boolean
+  hash_count: number
+  message: string
+}
+
+export interface Detection {
+  bbox: [number, number, number, number]
+  confidence: number
+  width: number
+  height: number
+}
+
+export interface CardMatch {
+  card_id: number  // Odoo product.product ID
+  sku: string
+  name: string
+  set_name: string
+  confidence: number
+  hash_distance: number
+  quantity: number
+  price: number
+}
+
+export interface ScanResult {
+  detections: Detection[]
+  matches: CardMatch[]
+  processing_time_ms: number
+  detection_time_ms: number
+  matching_time_ms: number
+  image_size: [number, number]
+  cards_found: number
+}
+
+export interface ScanResponse {
+  success: boolean
+  result: ScanResult
+  message: string
+}
+
+export interface QuickAddResponse {
+  success: boolean
+  card_added: boolean
+  card_info: CardMatch | null
+  scan_result: ScanResult
+  message: string
+}
+
+// Get scanner status
+export async function getScannerStatus(): Promise<ScannerStatus> {
+  const res = await authFetch(`${API_BASE}/scanner/status`)
+  if (!res.ok) throw new Error('Failed to get scanner status')
+  return res.json()
+}
+
+// Scan an image file
+export async function scanImage(file: File, detectOnly = false): Promise<ScanResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('detect_only', String(detectOnly))
+  
+  const token = localStorage.getItem(TOKEN_KEY)
+  const headers: HeadersInit = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  
+  const res = await fetch(`${API_BASE}/scanner/scan`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  })
+  
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY)
+    dispatchAuthFailure()
+  }
+  
+  if (!res.ok) throw new Error('Scan failed')
+  return res.json()
+}
+
+// Scan a base64-encoded image (from webcam/canvas)
+export async function scanBase64Image(imageBase64: string, detectOnly = false): Promise<ScanResponse> {
+  const res = await authFetch(`${API_BASE}/scanner/scan/base64`, {
+    method: 'POST',
+    body: JSON.stringify({ image: imageBase64, detect_only: detectOnly }),
+  })
+  if (!res.ok) throw new Error('Scan failed')
+  return res.json()
+}
+
+// Quick add - scan and optionally add to inventory
+export async function quickAddCard(params: {
+  image: string
+  warehouse_id?: number
+  quantity?: number
+  confirm_match?: boolean
+}): Promise<QuickAddResponse> {
+  const res = await authFetch(`${API_BASE}/scanner/quick-add`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) throw new Error('Quick add failed')
+  return res.json()
+}
+
+// Get hash database stats
+export async function getScannerDatabaseStats(): Promise<{
+  total_cards: number
+  total_hashes: number
+  total_sets: number
+  top_sets: { id: string; name: string; cards: number }[]
+}> {
+  const res = await authFetch(`${API_BASE}/scanner/database/stats`)
+  if (!res.ok) throw new Error('Failed to get database stats')
+  return res.json()
+}
+
+// Get scanner settings (for tuning)
+export interface ScannerSettings {
+  max_distance: number
+  hash_count: number
+  detector_conf_threshold: number
+  recommendations: {
+    strict: { max_distance: number; description: string }
+    balanced: { max_distance: number; description: string }
+    loose: { max_distance: number; description: string }
+  }
+}
+
+export async function getScannerSettings(): Promise<ScannerSettings> {
+  const res = await authFetch(`${API_BASE}/scanner/settings`)
+  if (!res.ok) throw new Error('Failed to get scanner settings')
+  return res.json()
+}
+
+// Tune scanner matching threshold
+export async function tuneScannerThreshold(maxDistance: number): Promise<{
+  success: boolean
+  max_distance: number
+  message: string
+}> {
+  const res = await authFetch(`${API_BASE}/scanner/tune`, {
+    method: 'POST',
+    body: JSON.stringify({ max_distance: maxDistance }),
+  })
+  if (!res.ok) throw new Error('Failed to tune scanner')
+  return res.json()
+}
+
+// Refresh hash cache from Odoo
+export async function refreshScannerCache(): Promise<{
+  success: boolean
+  hash_count: number
+  message: string
+}> {
+  const res = await authFetch(`${API_BASE}/scanner/refresh-cache`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error('Failed to refresh cache')
+  return res.json()
+}

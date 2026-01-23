@@ -5,6 +5,7 @@ from .images import router as images_router
 from .inventory import router as inventory_router
 from .labels import router as labels_router
 from .portfolio import router as portfolio_router
+from .scanner import router as scanner_router
 from .search import router as search_router
 from .sets import router as sets_router
 from .settings import router as settings_router
@@ -16,6 +17,7 @@ __all__ = [
     "inventory_router",
     "labels_router",
     "portfolio_router",
+    "scanner_router",
     "search_router",
     "sets_router",
     "settings_router",

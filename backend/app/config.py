@@ -84,6 +84,16 @@ class Settings(BaseSettings):
     postgres_user: str = "odoo"
     postgres_password: str = "odoo"
 
+    # Card Scanner (ML-based card detection + identification)
+    # Uses existing PostgreSQL for hash storage (no separate DB needed)
+    scanner_model_path: str = ""  # Path to ONNX model (auto-detected if empty)
+    scanner_conf_threshold: float = 0.5  # YOLO confidence threshold
+    # Max Hamming distance for hash matching (0-256 for 16x16 hash)
+    # Lower = stricter matching (more accurate but may miss cards)
+    # Higher = looser matching (finds more but less accurate)
+    # Recommended: 40-60 for good balance
+    scanner_max_hash_distance: int = 60
+
 
 @lru_cache
 def get_settings() -> Settings:
