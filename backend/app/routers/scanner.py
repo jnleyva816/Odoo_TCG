@@ -42,6 +42,7 @@ router = APIRouter(prefix="/scanner", tags=["scanner"])
 
 class ScannerStatus(BaseModel):
     """Scanner service status."""
+
     ready: bool
     detector_loaded: bool
     matcher_loaded: bool
@@ -53,12 +54,14 @@ class ScannerStatus(BaseModel):
 
 class ScanRequest(BaseModel):
     """Request body for base64 image scanning."""
+
     image: str = Field(..., description="Base64 encoded image")
     detect_only: bool = Field(False, description="Only detect, don't identify")
 
 
 class ScanResponse(BaseModel):
     """Response from scanning an image."""
+
     success: bool
     result: dict
     message: str = ""
@@ -66,11 +69,13 @@ class ScanResponse(BaseModel):
 
 class CardIdentifyRequest(BaseModel):
     """Request to identify a pre-cropped card image."""
+
     image: str = Field(..., description="Base64 encoded cropped card image")
 
 
 class CardIdentifyResponse(BaseModel):
     """Response from card identification."""
+
     success: bool
     matches: list[dict]
     message: str = ""
@@ -78,17 +83,18 @@ class CardIdentifyResponse(BaseModel):
 
 class QuickAddRequest(BaseModel):
     """Request to scan and add card to inventory."""
+
     image: str = Field(..., description="Base64 encoded image")
     warehouse_id: Optional[int] = Field(None, description="Target warehouse ID")
     quantity: int = Field(1, ge=1, le=100, description="Quantity to add")
     confirm_match: bool = Field(
-        False,
-        description="If True, automatically add best match without confirmation"
+        False, description="If True, automatically add best match without confirmation"
     )
 
 
 class QuickAddResponse(BaseModel):
     """Response from quick add operation."""
+
     success: bool
     card_added: bool
     card_info: Optional[dict] = None
@@ -118,7 +124,7 @@ async def get_scanner_status():
     message = "Scanner ready"
     if status_info["initialized"]:
         if mode == "embeddings":
-            count = status_info.get('embedding_count', 0)
+            count = status_info.get("embedding_count", 0)
             message = f"Scanner ready (SOTA mode: {count} embeddings)"
         else:
             message = f"Scanner ready (hash mode: {status_info['hash_count']} hashes)"
@@ -320,15 +326,12 @@ async def quick_add_card(
 
                 if success:
                     response.card_added = True
-                    response.message = (
-                        f"Added {request.quantity}x {best_match.name} to inventory"
-                    )
+                    response.message = f"Added {request.quantity}x {best_match.name} to inventory"
                 else:
                     response.message = "Failed to update inventory"
             else:
                 response.message = (
-                    f"Best match: {best_match.name} "
-                    f"(confidence: {best_match.confidence:.1%})"
+                    f"Best match: {best_match.name} (confidence: {best_match.confidence:.1%})"
                 )
         else:
             response.message = "No card matches found"
@@ -391,18 +394,22 @@ async def websocket_scanner(websocket: WebSocket):
                     detect_only = data.get("detect_only", False)
                     result = await scanner.scan_image(image, detect_only=detect_only)
 
-                    await websocket.send_json({
-                        "type": "result",
-                        "success": True,
-                        "result": result.to_dict(),
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "result",
+                            "success": True,
+                            "result": result.to_dict(),
+                        }
+                    )
 
                 except Exception as e:
-                    await websocket.send_json({
-                        "type": "result",
-                        "success": False,
-                        "error": str(e),
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "result",
+                            "success": False,
+                            "error": str(e),
+                        }
+                    )
 
             elif data.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
@@ -461,16 +468,18 @@ async def get_database_stats():
 
 class TuneRequest(BaseModel):
     """Request to tune scanner parameters."""
+
     max_distance: int = Field(
         ...,
         ge=10,
         le=200,
-        description="Max hash distance threshold (10-200). Lower = stricter matching."
+        description="Max hash distance threshold (10-200). Lower = stricter matching.",
     )
 
 
 class TuneResponse(BaseModel):
     """Response from tuning operation."""
+
     success: bool
     max_distance: int
     message: str
@@ -493,7 +502,7 @@ async def get_scanner_settings():
             "strict": {"max_distance": 40, "description": "Very accurate, may miss some cards"},
             "balanced": {"max_distance": 60, "description": "Good balance of accuracy and recall"},
             "loose": {"max_distance": 80, "description": "Finds more cards but less accurate"},
-        }
+        },
     }
 
 

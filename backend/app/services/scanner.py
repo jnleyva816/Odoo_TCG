@@ -62,6 +62,7 @@ IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 @dataclass
 class Detection:
     """Represents a detected card bounding box."""
+
     x1: float
     y1: float
     x2: float
@@ -97,6 +98,7 @@ class Detection:
 @dataclass
 class CardMatch:
     """Represents a matched card from Odoo."""
+
     card_id: int  # Odoo product.product ID
     sku: str
     name: str
@@ -122,6 +124,7 @@ class CardMatch:
 @dataclass
 class ScanResult:
     """Complete result of scanning an image."""
+
     detections: list[Detection] = field(default_factory=list)
     matches: list[CardMatch] = field(default_factory=list)
     processing_time_ms: float = 0.0
@@ -260,13 +263,15 @@ class CardDetector:
 
                 # Validate box dimensions
                 if x2 - x1 > 10 and y2 - y1 > 10:
-                    detections.append(Detection(
-                        x1=float(x1),
-                        y1=float(y1),
-                        x2=float(x2),
-                        y2=float(y2),
-                        confidence=float(conf),
-                    ))
+                    detections.append(
+                        Detection(
+                            x1=float(x1),
+                            y1=float(y1),
+                            x2=float(x2),
+                            y2=float(y2),
+                            confidence=float(conf),
+                        )
+                    )
 
         detections = self._nms(detections)
         return detections
@@ -282,10 +287,7 @@ class CardDetector:
         while detections:
             best = detections.pop(0)
             keep.append(best)
-            detections = [
-                d for d in detections
-                if self._iou(best, d) < self.iou_threshold
-            ]
+            detections = [d for d in detections if self._iou(best, d) < self.iou_threshold]
 
         return keep
 
@@ -411,6 +413,7 @@ class HashMatcher:
         # This helps with varying lighting conditions
         try:
             from PIL import ImageOps
+
             image = ImageOps.autocontrast(image, cutoff=1)
         except Exception:
             pass  # Skip if enhancement fails
@@ -469,10 +472,9 @@ class HashMatcher:
                     # distance 0 -> 100%, distance 30 -> ~88%, distance 60 -> ~77%
                     confidence = max(0, 1.0 - (phash_distance / 256.0) ** 0.7)
 
-                    matches.append((
-                        product_id, sku, name, set_name,
-                        phash_distance, confidence, qty, price
-                    ))
+                    matches.append(
+                        (product_id, sku, name, set_name, phash_distance, confidence, qty, price)
+                    )
             except Exception:
                 continue
 
@@ -488,9 +490,14 @@ class HashMatcher:
             if second_dist > 0 and (second_dist - best_dist) / second_dist > 0.2:
                 boost = min(0.1, (second_dist - best_dist) / 256.0)
                 matches[0] = (
-                    matches[0][0], matches[0][1], matches[0][2], matches[0][3],
-                    matches[0][4], min(1.0, matches[0][5] + boost),
-                    matches[0][6], matches[0][7]
+                    matches[0][0],
+                    matches[0][1],
+                    matches[0][2],
+                    matches[0][3],
+                    matches[0][4],
+                    min(1.0, matches[0][5] + boost),
+                    matches[0][6],
+                    matches[0][7],
                 )
 
         top_matches = matches[:top_k]
@@ -610,6 +617,7 @@ class EmbeddingMatcher:
         # Auto-contrast to normalize brightness/contrast variations from camera
         try:
             from PIL import ImageOps
+
             image = ImageOps.autocontrast(image, cutoff=2)
         except Exception:
             pass
@@ -680,12 +688,10 @@ class EmbeddingMatcher:
                 # Target dimensions (standard card ratio 2.5:3.5)
                 width = 250
                 height = 350
-                dst = np.array([
-                    [0, 0],
-                    [width - 1, 0],
-                    [width - 1, height - 1],
-                    [0, height - 1]
-                ], dtype=np.float32)
+                dst = np.array(
+                    [[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]],
+                    dtype=np.float32,
+                )
 
                 # Compute and apply perspective transform
                 matrix = cv2.getPerspectiveTransform(ordered, dst)
@@ -766,16 +772,18 @@ class EmbeddingMatcher:
                 continue
 
             card = self.metadata[metadata_idx]
-            matches.append(CardMatch(
-                card_id=card["id"],
-                sku=card.get("sku", ""),
-                name=card.get("name", ""),
-                set_name=card.get("set_name", ""),
-                confidence=confidence,
-                hash_distance=int((1 - confidence) * 100),  # Pseudo-distance for compatibility
-                quantity=card.get("quantity", 0),
-                price=card.get("price", 0.0),
-            ))
+            matches.append(
+                CardMatch(
+                    card_id=card["id"],
+                    sku=card.get("sku", ""),
+                    name=card.get("name", ""),
+                    set_name=card.get("set_name", ""),
+                    confidence=confidence,
+                    hash_distance=int((1 - confidence) * 100),  # Pseudo-distance for compatibility
+                    quantity=card.get("quantity", 0),
+                    price=card.get("price", 0.0),
+                )
+            )
 
             if len(matches) >= top_k:
                 break
@@ -892,11 +900,15 @@ class ScannerService:
             result.detections = self.detector.detect(image)
         else:
             # No detector, treat whole image as a card
-            result.detections = [Detection(
-                x1=0, y1=0,
-                x2=image.size[0], y2=image.size[1],
-                confidence=1.0,
-            )]
+            result.detections = [
+                Detection(
+                    x1=0,
+                    y1=0,
+                    x2=image.size[0],
+                    y2=image.size[1],
+                    confidence=1.0,
+                )
+            ]
 
         result.detection_time_ms = (time.time() - detection_start) * 1000
 

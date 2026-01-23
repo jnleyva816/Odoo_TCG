@@ -71,12 +71,14 @@ async def lifespan(app: FastAPI):
         scanner = get_scanner_service()
         scanner_status = await scanner.initialize()
         if scanner_status["initialized"]:
-            print(f"✅ Card scanner ready (detector: {scanner_status['detector']}, "
-                  f"matcher: {scanner_status['matcher']}, hashes: {scanner_status['hash_count']})")
+            print(
+                f"✅ Card scanner ready (detector: {scanner_status['detector']}, "
+                f"matcher: {scanner_status['matcher']}, hashes: {scanner_status['hash_count']})"
+            )
         else:
             print("⚠️  Card scanner partially initialized")
-            det = scanner_status['detector']
-            mat = scanner_status['matcher']
+            det = scanner_status["detector"]
+            mat = scanner_status["matcher"]
             print(f"   Detector: {det}, Matcher: {mat}")
     except Exception as e:
         print(f"⚠️  Card scanner init failed: {e}")
