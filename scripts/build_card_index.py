@@ -42,7 +42,7 @@ from PIL import Image, ImageEnhance, ImageOps
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -59,10 +59,7 @@ except ImportError:
     print("ERROR: faiss not installed. Run: pip install faiss-cpu")
     sys.exit(1)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Paths
@@ -108,14 +105,14 @@ def augment_image(image: Image.Image) -> list[Image.Image]:
     r, g, b = warmer.split()
     r = r.point(lambda x: min(255, int(x * 1.1)))
     b = b.point(lambda x: int(x * 0.9))
-    augmented.append(Image.merge('RGB', (r, g, b)))
+    augmented.append(Image.merge("RGB", (r, g, b)))
 
     # Cooler (more blue)
     cooler = image.copy()
     r, g, b = cooler.split()
     r = r.point(lambda x: int(x * 0.9))
     b = b.point(lambda x: min(255, int(x * 1.1)))
-    augmented.append(Image.merge('RGB', (r, g, b)))
+    augmented.append(Image.merge("RGB", (r, g, b)))
 
     return augmented
 
@@ -213,7 +210,7 @@ class EmbeddingModel:
         all_embeddings = []
 
         for i in range(0, len(images), batch_size):
-            batch = images[i:i + batch_size]
+            batch = images[i : i + batch_size]
             inputs = np.vstack([preprocess_image(img) for img in batch])
             result = self.session.run([self.output_name], {self.input_name: inputs})
             all_embeddings.append(result[0])
@@ -226,7 +223,11 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Only process 10 cards")
     parser.add_argument("--set", help="Only process cards from this set/category")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for embedding")
-    parser.add_argument("--no-augment", action="store_true", help="Disable data augmentation (faster but less accurate)")
+    parser.add_argument(
+        "--no-augment",
+        action="store_true",
+        help="Disable data augmentation (faster but less accurate)",
+    )
     args = parser.parse_args()
 
     use_augmentation = not args.no_augment
@@ -259,8 +260,11 @@ def main():
 
     if args.set:
         cat_ids = models.execute_kw(
-            db, uid, password,
-            "product.category", "search",
+            db,
+            uid,
+            password,
+            "product.category",
+            "search",
             [[("name", "ilike", args.set)]],
         )
         if cat_ids:
@@ -269,8 +273,11 @@ def main():
 
     # Get product count
     product_count = models.execute_kw(
-        db, uid, password,
-        "product.product", "search_count",
+        db,
+        uid,
+        password,
+        "product.product",
+        "search_count",
         [domain],
     )
 
@@ -283,8 +290,11 @@ def main():
     # Fetch products
     print("\n3. Fetching products from Odoo...")
     product_ids = models.execute_kw(
-        db, uid, password,
-        "product.product", "search",
+        db,
+        uid,
+        password,
+        "product.product",
+        "search",
         [domain],
         {"limit": limit} if limit else {},
     )
@@ -303,10 +313,23 @@ def main():
     for i, pid in enumerate(product_ids):
         # Fetch product with image
         products = models.execute_kw(
-            db, uid, password,
-            "product.product", "read",
+            db,
+            uid,
+            password,
+            "product.product",
+            "read",
             [pid],
-            {"fields": ["id", "name", "default_code", "categ_id", "image_1920", "qty_available", "list_price"]},
+            {
+                "fields": [
+                    "id",
+                    "name",
+                    "default_code",
+                    "categ_id",
+                    "image_1920",
+                    "qty_available",
+                    "list_price",
+                ]
+            },
         )
 
         if not products:
@@ -348,7 +371,7 @@ def main():
             for aug_img in augmented_images:
                 # Convert to bytes for embedding
                 buf = io.BytesIO()
-                aug_img.save(buf, format='PNG')
+                aug_img.save(buf, format="PNG")
                 aug_data = buf.getvalue()
 
                 embedding = embedder.embed(aug_data)
@@ -356,7 +379,9 @@ def main():
                 metadata_indices.append(metadata_idx)
 
             if (i + 1) % 100 == 0:
-                logger.info(f"   Processed {i + 1}/{len(product_ids)} products ({len(embeddings)} embeddings)")
+                logger.info(
+                    f"   Processed {i + 1}/{len(product_ids)} products ({len(embeddings)} embeddings)"
+                )
 
         except Exception as e:
             logger.warning(f"   Error processing product {pid}: {e}")

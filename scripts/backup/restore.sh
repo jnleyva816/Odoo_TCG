@@ -95,7 +95,7 @@ if command -v docker &> /dev/null; then
             alpine sh -c "tar xzf /backup/redis-data.tar.gz -C /data" 2>/dev/null || log_warn "Redis restore failed"
         log_info "Redis data restored"
     fi
-    
+
     if [ -f "$PROJECT_ROOT/$BACKUP_DIR/meili-data.tar.gz" ]; then
         log_warn "Clearing Meilisearch data before restore..."
         docker run --rm \

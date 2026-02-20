@@ -1,7 +1,6 @@
 """Tests for barcode generation."""
 
 import pytest
-
 from tcg_automation.commands.barcodes import (
     BARCODE_PREFIX,
     calculate_ean13_check_digit,
@@ -31,7 +30,7 @@ class TestEAN13CheckDigit:
     def test_check_digit_non_numeric(self):
         """Test that non-numeric input raises error."""
         with pytest.raises(ValueError):
-            calculate_ean13_check_digit("12345678901a")
+            calculate_ean13_check_digit("12345678901a")  # pragma: allowlist secret
 
 
 class TestGenerateEAN13:
@@ -94,6 +93,3 @@ class TestBarcodeFormat:
         # Format: 200 + 9 digits + 1 check = 13 total
         # Sequence 1 should be padded to 000000001
         assert barcode[3:12] == "000000001"
-
-
-

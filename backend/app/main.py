@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse
 
 from .auth.odoo_auth import get_odoo_auth_service
 from .auth.router import router as auth_router
@@ -243,6 +244,37 @@ def create_app() -> FastAPI:
         service = get_settings_service()
         features = await service.get_features()
         return features.model_dump()
+
+    @app.get("/api/download/mobile-app")
+    async def download_mobile_app():
+        """Download the Android mobile app APK."""
+        from pathlib import Path
+
+        project_root = Path(__file__).parent.parent.parent
+        apk_path = (
+            project_root
+            / "mobile"
+            / "android"
+            / "app"
+            / "build"
+            / "outputs"
+            / "apk"
+            / "release"
+            / "app-release.apk"
+        )
+
+        if not apk_path.exists():
+            return Response(
+                content=json.dumps({"error": "APK not found"}),
+                status_code=status.HTTP_404_NOT_FOUND,
+                media_type="application/json",
+            )
+
+        return FileResponse(
+            path=str(apk_path),
+            filename="TCG-Inventory.apk",
+            media_type="application/vnd.android.package-archive",
+        )
 
     @app.get("/")
     async def root():

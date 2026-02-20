@@ -18,7 +18,7 @@ function getVariantLabel(name: string): string {
     /-\s*(Reverse Holo(?:foil)?)\s*$/i,
     /-\s*(Holo(?:foil)?)\s*$/i,
   ]
-  
+
   for (const pattern of patterns) {
     const match = name.match(pattern)
     if (match) return match[1]
@@ -63,14 +63,14 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
       queryClient.invalidateQueries({ queryKey: ['card-variants', cardId] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
       // Use predicate to match all set-cards queries regardless of setId
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === 'set-cards'
       })
       // Also invalidate card search results and dashboard stats
       queryClient.invalidateQueries({ queryKey: ['card-search'] })
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          query.queryKey[0] === 'inventory-total' || 
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'inventory-total' ||
           query.queryKey[0] === 'inventory-instock'
       })
     },
@@ -172,7 +172,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
             >
               <ChevronLeft size={20} />
             </button>
-            
+
             <div className="flex gap-1 md:gap-1.5 overflow-x-auto py-1 px-1 md:px-2">
               {variants.map((variant) => {
                 const label = getVariantLabel(variant.name)
@@ -195,7 +195,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
                 )
               })}
             </div>
-            
+
             <button
               onClick={goToNextVariant}
               disabled={currentVariantIndex === variants.length - 1}
@@ -209,7 +209,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
 
       {/* Fullscreen Image Overlay */}
       {isFullscreen && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-pointer"
           onClick={() => setIsFullscreen(false)}
         >
@@ -220,11 +220,11 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
             <Minimize2 size={24} />
           </button>
           <div className="max-w-[95vw] max-h-[95vh] overflow-hidden rounded-xl shadow-2xl">
-            <CardImage 
-              productId={selectedVariantId} 
-              alt={card.name} 
-              size="image_1920" 
-              className="max-w-full max-h-[95vh] object-contain" 
+            <CardImage
+              productId={selectedVariantId}
+              alt={card.name}
+              size="image_1920"
+              className="max-w-full max-h-[95vh] object-contain"
             />
           </div>
           <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">
@@ -236,7 +236,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
       <div className="flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6">
         {/* Card Image - native resolution, centered with contrasting background */}
         <div className="flex justify-center items-center">
-          <div 
+          <div
             className="bg-black dark:bg-white rounded-lg md:rounded-xl p-2 md:p-4 shadow-lg relative group cursor-pointer"
             onClick={() => setIsFullscreen(true)}
           >
@@ -245,9 +245,9 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
             </div>
             {/* Fullscreen hint overlay */}
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg md:rounded-xl">
-              <Maximize2 
-                size={32} 
-                className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" 
+              <Maximize2
+                size={32}
+                className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
               />
             </div>
           </div>
@@ -258,7 +258,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
           <h2 className="font-display font-bold text-base md:text-2xl text-surface-900 dark:text-white mb-1 md:mb-2 text-center md:text-left">
             {card.name}
           </h2>
-          
+
           <div className="space-y-1 md:space-y-3 text-xs md:text-sm mb-2 md:mb-6">
             <InfoRow label="SKU" value={card.sku} mono />
             <InfoRow label="Set" value={card.set_name || 'N/A'} />
@@ -275,7 +275,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
               <span className="font-display text-2xl md:text-4xl font-bold text-surface-900 dark:text-white">
                 {stockMutation.isPending ? '...' : card.quantity}
               </span>
-              
+
               <div className="flex items-center gap-1 md:gap-2">
                 <button
                   onClick={() => handleAdjust(-adjustAmount)}
@@ -284,7 +284,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
                 >
                   <Minus size={16} className="md:w-[18px] md:h-[18px]" />
                 </button>
-                
+
                 <input
                   type="number"
                   min="1"
@@ -293,7 +293,7 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
                   onChange={(e) => setAdjustAmount(Math.max(1, parseInt(e.target.value) || 1))}
                   className="w-10 md:w-16 text-center input text-xs md:text-sm py-1 md:py-2"
                 />
-                
+
                 <button
                   onClick={() => handleAdjust(adjustAmount)}
                   disabled={stockMutation.isPending}
@@ -327,8 +327,8 @@ export default function CardModal({ cardId, onClose }: CardModalProps) {
               onClick={() => printMutation.mutate()}
               disabled={!printerStatus?.connected || printStatus === 'printing'}
               className={`btn flex-1 text-xs md:text-base py-1.5 md:py-2.5 ${
-                printStatus === 'success' 
-                  ? 'btn-success bg-green-600 hover:bg-green-700' 
+                printStatus === 'success'
+                  ? 'btn-success bg-green-600 hover:bg-green-700'
                   : printStatus === 'error'
                   ? 'btn-error bg-red-600 hover:bg-red-700'
                   : 'btn-primary'
@@ -386,7 +386,7 @@ function ModalWrapper({ children, onClose }: { children: React.ReactNode; onClos
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="relative bg-white dark:bg-surface-900 rounded-xl md:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto animate-slide-up">
         <button
@@ -395,7 +395,7 @@ function ModalWrapper({ children, onClose }: { children: React.ReactNode; onClos
         >
           <X size={20} />
         </button>
-        
+
         <div className="p-3 md:p-6">
           {children}
         </div>

@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await response.json();
     const newToken = data.token.access_token;
-    
+
     localStorage.setItem(TOKEN_KEY, newToken);
     setToken(newToken);
     setUser(data.user);
@@ -149,13 +149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const result = await apiSwitchWarehouse(warehouseId);
-    
+
     // Store the new token (contains updated warehouse)
     if (result.new_token) {
       localStorage.setItem(TOKEN_KEY, result.new_token);
       setToken(result.new_token);
     }
-    
+
     // Update local user state
     setUser({ ...user, warehouse_id: warehouseId });
   };
@@ -188,4 +188,3 @@ export function useAuth() {
   }
   return context;
 }
-

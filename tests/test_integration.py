@@ -419,7 +419,7 @@ class TestAuthenticationFlow:
         response = safe_request(
             client.post,
             "/api/auth/login",
-            json={"username": "invalid", "password": "invalid"},
+            json={"username": "invalid", "password": "invalid"},  # pragma: allowlist secret
         )
         if response is None:
             pytest.skip("External services unavailable")
@@ -432,7 +432,7 @@ class TestAuthenticationFlow:
         response = safe_request(
             client.post,
             "/api/auth/login",
-            json={"username": "test", "password": "test"},
+            json={"username": "test", "password": "test"},  # pragma: allowlist secret
         )
         if response is None:
             pytest.skip("External services unavailable")

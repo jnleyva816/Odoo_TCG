@@ -17,5 +17,3 @@ REM Run price sync
 tcg sync
 
 pause
-
-

@@ -214,5 +214,3 @@ Create beautiful, shareable pages for your inventory.
 - [ ] QR code generation
 - [ ] Offer/inquiry system
 - [ ] Integration with eBay listings
-
-

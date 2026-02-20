@@ -68,7 +68,7 @@ Utilities for:
 - Data integrity
 
 ### 5. Security Documentation
-**Files**: 
+**Files**:
 - `SECURITY.md` - Security policy
 - `.well-known/security.txt` - Responsible disclosure
 

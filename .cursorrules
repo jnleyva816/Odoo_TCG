@@ -255,5 +255,3 @@ Push to `main` branch triggers:
 3. Propose multiple solutions with trade-offs
 4. Start simple, optimize later (but plan for scale)
 5. Document decisions for future reference
-
-

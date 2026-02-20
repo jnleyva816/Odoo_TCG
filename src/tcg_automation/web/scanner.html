@@ -1093,7 +1093,7 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        
+
         .lazy-img[src]:not([src^="data:"]) {
             opacity: 1;
         }
@@ -1160,18 +1160,18 @@
                 <div class="logo-icon">⚡</div>
                 <span>TCG Scanner</span>
             </div>
-            
+
             <nav class="nav">
                 <a class="nav-link active" data-page="scanner" onclick="showPage('scanner')">Scanner</a>
                 <a class="nav-link" data-page="inventory" onclick="showPage('inventory')">Inventory</a>
             </nav>
-            
+
             <div class="header-actions">
                 <div class="status-badge" id="status">
                     <span class="status-dot"></span>
                     <span>Connecting</span>
                 </div>
-                
+
                 <div class="printer-badge offline" id="printerStatus" title="Label Printer Status" onclick="checkPrinterStatus()">
                     <svg class="printer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="6 9 6 2 18 2 18 9"/>
@@ -1180,7 +1180,7 @@
                     </svg>
                     <span>Printer</span>
                 </div>
-                
+
                 <button class="theme-toggle" id="themeToggle" title="Toggle theme">
                     <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -1222,7 +1222,7 @@
                             <input type="text" class="search-input" id="searchInput" placeholder="Search by name, number, or SKU..." autofocus>
                         </div>
                     </div>
-                    
+
                     <div class="results-container" id="searchResults">
                         <div class="no-results">
                             <div class="no-results-icon">🔍</div>
@@ -1250,7 +1250,7 @@
                             Search and select cards to add to queue
                         </div>
                     </div>
-                    
+
                     <div class="action-buttons" style="grid-template-columns: 1fr;">
                         <button class="action-btn primary" id="btnAdd" onclick="confirmAdd()" disabled>
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1295,7 +1295,7 @@
                         </svg>
                         Inventory
                     </h2>
-                    
+
                     <div class="toolbar">
                         <div class="toolbar-group">
                             <select class="toolbar-select" id="invSetFilter" onchange="loadInventory()">
@@ -1341,7 +1341,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="stats-bar" id="inventoryStats">
                     <div class="stat-item">
                         <span class="stat-value" id="statTotal">0</span>
@@ -1448,10 +1448,10 @@
         function showPage(pageName) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            
+
             document.getElementById('page-' + pageName).classList.add('active');
             document.querySelector(`.nav-link[data-page="${pageName}"]`).classList.add('active');
-            
+
             if (pageName === 'inventory') {
                 loadInventory();
             }
@@ -1483,7 +1483,7 @@
                 const data = await res.json();
                 const el = document.getElementById('printerStatus');
                 printerOnline = data.connected;
-                
+
                 if (data.connected) {
                     el.className = 'printer-badge online';
                     el.title = `${data.model} @ ${data.ip} - Online`;
@@ -1494,7 +1494,7 @@
                     el.className = 'printer-badge offline';
                     el.title = 'Printer disabled';
                 }
-                
+
                 updateQueue(); // Update button states
             } catch {
                 const el = document.getElementById('printerStatus');
@@ -1510,11 +1510,11 @@
                 const res = await fetch(`${API}/api/sets`);
                 const data = await res.json();
                 sets = data.sets || [];
-                
+
                 // Populate set dropdowns
                 const setSelect = document.getElementById('setSelect');
                 const invSetFilter = document.getElementById('invSetFilter');
-                
+
                 sets.forEach(s => {
                     const opt1 = new Option(s.name, s.code);
                     const opt2 = new Option(s.name, s.code);
@@ -1559,8 +1559,8 @@
                 resultsEl.innerHTML = data.results.map(card => {
                     const variantClass = card.variant.toLowerCase().replace(' ', '');
                     const inQueue = queue.some(q => q.sku === card.sku);
-                    const imgSrc = loadedImages.has(`${API}/api/image/${card.id}`) 
-                        ? `${API}/api/image/${card.id}` 
+                    const imgSrc = loadedImages.has(`${API}/api/image/${card.id}`)
+                        ? `${API}/api/image/${card.id}`
                         : `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 70'%3E%3Crect fill='%23262626' width='50' height='70'/%3E%3C/svg%3E`;
 
                     return `
@@ -1580,7 +1580,7 @@
                         </div>
                     `;
                 }).join('');
-                
+
                 // Lazy load search result images
                 initLazyLoading();
 
@@ -1704,18 +1704,18 @@
 
         async function printQueueDirect() {
             if (queue.length === 0 || !printerOnline) return;
-            
+
             const skus = queue.map(q => q.sku);
-            
+
             try {
                 const res = await fetch(`${API}/api/printer/print-batch`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ skus })
                 });
-                
+
                 const data = await res.json();
-                
+
                 if (data.success) {
                     showToast(`✓ Printed ${data.printed}/${data.total} labels`, 'success');
                 } else {
@@ -1729,18 +1729,18 @@
         async function printAddedDirect() {
             closeModal('successModal');
             if (lastAdded.length === 0) return;
-            
+
             const skus = lastAdded.map(item => item.sku);
-            
+
             try {
                 const res = await fetch(`${API}/api/printer/print-batch`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ skus })
                 });
-                
+
                 const data = await res.json();
-                
+
                 if (data.success) {
                     showToast(`✓ Printed ${data.printed}/${data.total} labels`, 'success');
                 } else {
@@ -1812,7 +1812,7 @@
 
         function renderInventory() {
             const container = document.getElementById('inventoryContainer');
-            
+
             if (inventoryData.results.length === 0) {
                 container.innerHTML = '<div class="no-results"><div class="no-results-icon">📭</div><div>No cards found</div></div>';
                 return;
@@ -1855,11 +1855,11 @@
                     `;
                 }).join('')}</div>`;
             }
-            
+
             // Initialize lazy loading for new images
             initLazyLoading();
         }
-        
+
         // Lazy loading with IntersectionObserver
         function initLazyLoading() {
             if (!imageObserver) {
@@ -1881,7 +1881,7 @@
                     threshold: 0.01
                 });
             }
-            
+
             // Observe all lazy images
             document.querySelectorAll('.lazy-img').forEach(img => {
                 if (img.dataset.src && !loadedImages.has(img.dataset.src)) {

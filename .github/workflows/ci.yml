@@ -57,8 +57,8 @@ jobs:
           ODOO_URL: http://localhost:8069
           ODOO_DB: test
           ODOO_USER: test
-          ODOO_PASSWORD: test
-          JWT_SECRET_KEY: test-secret-key-for-ci
+          ODOO_PASSWORD: test  # pragma: allowlist secret
+          JWT_SECRET_KEY: test-secret-key-for-ci  # pragma: allowlist secret
 
   # ==========================================================
   # Frontend Tests & Build

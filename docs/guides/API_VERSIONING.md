@@ -104,7 +104,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIVersionMiddleware(BaseHTTPMiddleware):
     """Detect and validate API version from URL."""
-    
+
     async def dispatch(self, request: Request, call_next):
         # Extract version from path
         path_parts = request.url.path.split("/")
@@ -113,12 +113,12 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
             request.state.api_version = version
         else:
             request.state.api_version = "v1"  # Default
-        
+
         response = await call_next(request)
-        
+
         # Add version header
         response.headers["X-API-Version"] = request.state.api_version
-        
+
         return response
 ```
 
@@ -131,7 +131,7 @@ from warnings import warn
 
 def deprecated(version: str, alternative: str):
     """Mark endpoint as deprecated.
-    
+
     Args:
         version: Version when deprecated
         alternative: Suggested alternative endpoint
@@ -146,12 +146,12 @@ def deprecated(version: str, alternative: str):
                 DeprecationWarning,
                 stacklevel=2,
             )
-            
+
             # Add deprecation header
             response = await func(*args, **kwargs)
             response.headers["X-API-Deprecation"] = version
             response.headers["X-API-Alternative"] = alternative
-            
+
             return response
         return wrapper
     return decorator
@@ -188,10 +188,10 @@ async def get_inventory_legacy():
    # v1: Single JWT token
    - POST /api/v1/auth/login
    - Response: { "access_token": "...", "token_type": "bearer" }
-   
+
    # v2: Access + refresh tokens
    + POST /api/v2/auth/login
-   + Response: { 
+   + Response: {
    +   "access_token": "...",
    +   "refresh_token": "...",
    +   "token_type": "bearer",
@@ -203,7 +203,7 @@ async def get_inventory_legacy():
    ```diff
    # v1: Simple error
    - { "detail": "Not found" }
-   
+
    # v2: Structured error
    + {
    +   "error": {
@@ -236,12 +236,12 @@ async def get_inventory_legacy():
 # tcg_client/client.py
 class TCGClient:
     """TCG Inventory API client."""
-    
+
     def __init__(self, base_url: str, version: str = "v1"):
         self.base_url = base_url
         self.version = version
         self.api_url = f"{base_url}/api/{version}"
-    
+
     async def get_cards(self, query: str) -> list[dict]:
         """Search for cards."""
         response = await self.session.get(
@@ -343,12 +343,12 @@ import pytest
 
 class TestAPIv1:
     """Tests for API v1."""
-    
+
     @pytest.fixture
     def client_v1(self):
         """Client for v1 API."""
         return TestClient(app, base_url="http://testserver/api/v1")
-    
+
     def test_get_cards_v1(self, client_v1):
         """Test card search in v1."""
         response = client_v1.get("/cards/search?q=pikachu")
@@ -358,12 +358,12 @@ class TestAPIv1:
 # tests/test_api_v2.py
 class TestAPIv2:
     """Tests for API v2."""
-    
+
     @pytest.fixture
     def client_v2(self):
         """Client for v2 API."""
         return TestClient(app, base_url="http://testserver/api/v2")
-    
+
     def test_get_cards_v2_cursor_pagination(self, client_v2):
         """Test cursor-based pagination in v2."""
         response = client_v2.get("/cards/search?q=pikachu&limit=10")
@@ -378,15 +378,15 @@ def test_v1_to_v2_compatibility():
     """Test that v1 and v2 return compatible data structures."""
     client_v1 = TestClient(app, base_url="http://testserver/api/v1")
     client_v2 = TestClient(app, base_url="http://testserver/api/v2")
-    
+
     # Get same data from both versions
     v1_response = client_v1.get("/cards/search?q=pikachu")
     v2_response = client_v2.get("/cards/search?q=pikachu")
-    
+
     # Extract common fields
     v1_cards = v1_response.json()["results"]
     v2_cards = v2_response.json()["items"]
-    
+
     # Verify essential fields are present in both
     for card in v1_cards:
         assert "id" in card
@@ -409,21 +409,21 @@ def custom_openapi_v1():
     """Generate OpenAPI schema for v1."""
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title="TCG Inventory API v1",
         version="1.0.0",
         description="API v1 documentation",
         routes=app.routes,
     )
-    
+
     # Filter routes to only v1
     filtered_paths = {
         k: v for k, v in openapi_schema["paths"].items()
         if k.startswith("/api/v1/")
     }
     openapi_schema["paths"] = filtered_paths
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 

@@ -67,7 +67,7 @@ Test individual functions and classes in isolation.
 def test_validate_email():
     """Test email validation."""
     from app.utils.validators import validate_email
-    
+
     assert validate_email("user@example.com") is True
     assert validate_email("invalid-email") is False
     assert validate_email("") is False
@@ -84,10 +84,10 @@ async def test_odoo_authentication():
     """Test Odoo authentication integration."""
     from app.services.odoo import OdooService
     from app.config import get_settings
-    
+
     settings = get_settings()
     odoo = OdooService(settings)
-    
+
     # This requires Odoo to be running
     connected = await odoo.connect()
     assert connected is True
@@ -105,10 +105,10 @@ async def test_inventory_adjustment_workflow(client):
     # Login
     response = await client.post("/api/auth/login", json={
         "username": "test",
-        "password": "test"
+        "password": "test"  # pragma: allowlist secret
     })
     token = response.json()["access_token"]
-    
+
     # Adjust inventory
     response = await client.post(
         "/api/inventory/adjust",
@@ -137,7 +137,7 @@ def auth_token(client):
     """Authenticated token."""
     response = client.post("/api/auth/login", json={
         "username": "test",
-        "password": "test"
+        "password": "test"  # pragma: allowlist secret
     })
     return response.json()["access_token"]
 
@@ -164,7 +164,7 @@ async def test_get_inventory(mock_odoo):
         [{"id": 1, "name": "Card"}],
         1
     ))
-    
+
     # Test your function
     result = await get_inventory_items()
     assert len(result) == 1
@@ -184,7 +184,7 @@ def test_external_api():
         json={"cards": []},
         status=200
     )
-    
+
     # Test your function that calls the API
     result = fetch_cards()
     assert result == {"cards": []}
@@ -296,15 +296,15 @@ from locust import HttpUser, task, between
 
 class APIUser(HttpUser):
     wait_time = between(1, 3)
-    
+
     def on_start(self):
         """Login before tests."""
         response = self.client.post("/api/auth/login", json={
             "username": "test",
-            "password": "test"
+            "password": "test"  # pragma: allowlist secret
         })
         self.token = response.json()["access_token"]
-    
+
     @task
     def get_inventory(self):
         """Test inventory endpoint."""
@@ -340,10 +340,10 @@ def test_search_cards_empty_query_returns_all():
 def test_example():
     # Arrange - Setup test data
     user = User(username="test")
-    
+
     # Act - Perform action
     result = authenticate(user, "password")
-    
+
     # Assert - Verify result
     assert result is True
 ```
@@ -402,7 +402,7 @@ import factory
 class UserFactory(factory.Factory):
     class Meta:
         model = User
-    
+
     username = factory.Sequence(lambda n: f"user{n}")
     email = factory.LazyAttribute(lambda obj: f"{obj.username}@example.com")
 

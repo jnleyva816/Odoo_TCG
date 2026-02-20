@@ -127,6 +127,3 @@ ports:
 ```bash
 docker compose logs backend
 ```
-
-
-

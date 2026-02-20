@@ -171,7 +171,7 @@ export default function ScannerPage() {
           const handleLoadedMetadata = () => {
             video.removeEventListener('loadedmetadata', handleLoadedMetadata)
             video.removeEventListener('error', handleError)
-            
+
             video.play()
               .then(() => {
                 // Give a brief moment for dimensions to be available
@@ -930,11 +930,11 @@ export default function ScannerPage() {
       {showScanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={closeScanModal}
           />
-          
+
           {/* Modal */}
           <div className="relative bg-white dark:bg-surface-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden animate-fade-in">
             {/* Header */}

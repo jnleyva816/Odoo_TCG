@@ -36,7 +36,7 @@ from pathlib import Path
 # Add backend to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -49,10 +49,7 @@ except ImportError:
 from PIL import Image  # noqa: E402
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Standard card dimensions for hashing (matches scanner preprocessing)
@@ -111,7 +108,9 @@ def compute_phash(image_data: bytes) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Populate x_phash for Odoo products")
     parser.add_argument("--dry-run", action="store_true", help="Don't actually update")
-    parser.add_argument("--force", action="store_true", help="Re-hash ALL products, not just missing ones")
+    parser.add_argument(
+        "--force", action="store_true", help="Re-hash ALL products, not just missing ones"
+    )
     parser.add_argument("--set", help="Only process products in this set/category")
     parser.add_argument("--limit", type=int, help="Limit number of products to process")
     args = parser.parse_args()
@@ -143,8 +142,11 @@ def main():
     if args.set:
         # Find category by name
         cat_ids = models.execute_kw(
-            db, uid, password,
-            "product.category", "search",
+            db,
+            uid,
+            password,
+            "product.category",
+            "search",
             [[("name", "ilike", args.set)]],
         )
         if cat_ids:
@@ -156,8 +158,11 @@ def main():
     # Find products
     logger.info("Finding products...")
     product_ids = models.execute_kw(
-        db, uid, password,
-        "product.product", "search",
+        db,
+        uid,
+        password,
+        "product.product",
+        "search",
         [domain],
         {"limit": args.limit} if args.limit else {},
     )
@@ -175,8 +180,11 @@ def main():
     for i, pid in enumerate(product_ids):
         # Read product with image
         products = models.execute_kw(
-            db, uid, password,
-            "product.product", "read",
+            db,
+            uid,
+            password,
+            "product.product",
+            "read",
             [pid],
             {"fields": ["id", "name", "default_code", "image_1920"]},
         )
@@ -206,8 +214,11 @@ def main():
             if not args.dry_run:
                 # Update product
                 models.execute_kw(
-                    db, uid, password,
-                    "product.product", "write",
+                    db,
+                    uid,
+                    password,
+                    "product.product",
+                    "write",
                     [[pid], {"x_phash": phash}],
                 )
                 updated += 1

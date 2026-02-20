@@ -61,5 +61,3 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
 export function useFeatures() {
   return useContext(FeaturesContext);
 }
-
-

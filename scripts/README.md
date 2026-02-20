@@ -130,4 +130,3 @@ Development server startup scripts.
 - All `.sh` scripts should be run from the project root directory
 - Ensure scripts have execute permissions: `chmod +x scripts/**/*.sh`
 - Set environment variables in `.env` before running scripts
-

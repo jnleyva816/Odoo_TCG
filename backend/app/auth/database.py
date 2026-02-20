@@ -16,7 +16,8 @@ async def init_db():
         db.row_factory = aiosqlite.Row
 
         # Users table with warehouse support
-        await db.execute("""
+        await db.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -29,7 +30,8 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Migration: Add warehouse columns if they don't exist
         try:
@@ -43,7 +45,8 @@ async def init_db():
             pass  # Column already exists
 
         # Login attempts table (for security monitoring)
-        await db.execute("""
+        await db.execute(
+            """
             CREATE TABLE IF NOT EXISTS login_attempts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
@@ -52,10 +55,12 @@ async def init_db():
                 success BOOLEAN NOT NULL,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Sessions table (for token invalidation)
-        await db.execute("""
+        await db.execute(
+            """
             CREATE TABLE IF NOT EXISTS sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -65,7 +70,8 @@ async def init_db():
                 revoked BOOLEAN DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
-        """)
+        """
+        )
 
         await db.commit()
 

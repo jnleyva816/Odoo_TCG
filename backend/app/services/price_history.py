@@ -36,7 +36,8 @@ async def init_price_history_table() -> None:
     """Create the price_history table if it doesn't exist."""
     pool = await get_pool()
     async with pool.acquire() as conn:
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS price_history (
                 id SERIAL PRIMARY KEY,
                 product_sku VARCHAR(50) NOT NULL,
@@ -55,7 +56,8 @@ async def init_price_history_table() -> None:
                 ON price_history(recorded_at);
             CREATE INDEX IF NOT EXISTS idx_price_history_sku_date
                 ON price_history(product_sku, recorded_at DESC);
-        """)
+        """
+        )
         logger.info("Price history table initialized")
 
 

@@ -19,9 +19,9 @@ class TestFeatureFlags:
 
         # Create settings with defaults
         settings = Settings(
-            jwt_secret_key="test-secret-key",
+            jwt_secret_key="test-secret-key",  # pragma: allowlist secret
             odoo_user="test",
-            odoo_password="test",
+            odoo_password="test",  # pragma: allowlist secret
         )
 
         assert settings.feature_sets_page is False
@@ -38,9 +38,9 @@ class TestFeatureFlags:
             {
                 "FEATURE_SETS_PAGE": "true",
                 "FEATURE_SCANNER_PAGE": "false",
-                "JWT_SECRET_KEY": "test-key",
+                "JWT_SECRET_KEY": "test-key",  # pragma: allowlist secret
                 "ODOO_USER": "test",
-                "ODOO_PASSWORD": "test",
+                "ODOO_PASSWORD": "test",  # pragma: allowlist secret
             },
         ):
             settings = Settings()
@@ -57,13 +57,13 @@ class TestAuthConfiguration:
         from app.config import Settings
 
         settings = Settings(
-            jwt_secret_key="my-super-secret-key-12345",
+            jwt_secret_key="my-super-secret-key-12345",  # pragma: allowlist secret
             jwt_expire_minutes=60,
             odoo_user="test",
-            odoo_password="test",
+            odoo_password="test",  # pragma: allowlist secret
         )
 
-        assert settings.jwt_secret_key == "my-super-secret-key-12345"
+        assert settings.jwt_secret_key == "my-super-secret-key-12345"  # pragma: allowlist secret
         assert settings.jwt_expire_minutes == 60
 
     def test_admin_settings(self):
@@ -71,17 +71,17 @@ class TestAuthConfiguration:
         from app.config import Settings
 
         settings = Settings(
-            jwt_secret_key="test-key",
+            jwt_secret_key="test-key",  # pragma: allowlist secret
             admin_username="myadmin",
             admin_email="admin@example.com",
-            admin_password="securepass",
+            admin_password="securepass",  # pragma: allowlist secret
             odoo_user="test",
-            odoo_password="test",
+            odoo_password="test",  # pragma: allowlist secret
         )
 
         assert settings.admin_username == "myadmin"
         assert settings.admin_email == "admin@example.com"
-        assert settings.admin_password == "securepass"
+        assert settings.admin_password == "securepass"  # pragma: allowlist secret
 
 
 class TestPrinterConfiguration:
@@ -92,9 +92,9 @@ class TestPrinterConfiguration:
         from app.config import Settings
 
         settings = Settings(
-            jwt_secret_key="test-key",
+            jwt_secret_key="test-key",  # pragma: allowlist secret
             odoo_user="test",
-            odoo_password="test",
+            odoo_password="test",  # pragma: allowlist secret
             printer_enabled=False,
         )
 
@@ -105,14 +105,14 @@ class TestPrinterConfiguration:
         from app.config import Settings
 
         settings = Settings(
-            jwt_secret_key="test-key",
+            jwt_secret_key="test-key",  # pragma: allowlist secret
             printer_enabled=True,
             printer_ip="192.168.1.100",
             printer_port=9100,
             printer_model="QL-800",
             printer_label_size="29",
             odoo_user="test",
-            odoo_password="test",
+            odoo_password="test",  # pragma: allowlist secret
         )
 
         assert settings.printer_enabled is True
@@ -130,9 +130,9 @@ class TestCORSConfiguration:
         from app.config import Settings
 
         settings = Settings(
-            jwt_secret_key="test-key",
+            jwt_secret_key="test-key",  # pragma: allowlist secret
             odoo_user="test",
-            odoo_password="test",
+            odoo_password="test",  # pragma: allowlist secret
         )
 
         assert "http://localhost:5173" in settings.cors_origins
@@ -147,30 +147,29 @@ class TestOdooConfiguration:
         from app.config import Settings
 
         settings = Settings(
-            jwt_secret_key="test-key",
+            jwt_secret_key="test-key",  # pragma: allowlist secret
             odoo_url="http://my-odoo:8069",
             odoo_db="my-database",
             odoo_user="admin@example.com",
-            odoo_password="admin-pass",
+            odoo_password="admin-pass",  # pragma: allowlist secret
         )
 
         assert settings.odoo_url == "http://my-odoo:8069"
         assert settings.odoo_db == "my-database"
         assert settings.odoo_user == "admin@example.com"
-        assert settings.odoo_password == "admin-pass"
+        assert settings.odoo_password == "admin-pass"  # pragma: allowlist secret
 
     def test_odoo_can_be_configured(self):
         """Test Odoo values can be set."""
         from app.config import Settings
 
         settings = Settings(
-            jwt_secret_key="test-key",
+            jwt_secret_key="test-key",  # pragma: allowlist secret
             odoo_url="http://custom-server:8069",
             odoo_db="custom-db",
             odoo_user="test",
-            odoo_password="test",
+            odoo_password="test",  # pragma: allowlist secret
         )
 
         assert settings.odoo_url == "http://custom-server:8069"
         assert settings.odoo_db == "custom-db"
-

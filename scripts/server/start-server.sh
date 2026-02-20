@@ -18,5 +18,3 @@ echo "Open http://localhost:5000 in your browser"
 echo
 
 tcg server
-
-

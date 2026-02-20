@@ -10,8 +10,6 @@ Usage:
 """
 
 import json
-import os
-import sys
 from pathlib import Path
 
 import requests
@@ -43,7 +41,7 @@ def download_logo(logo_url: str, output_path: Path) -> bool:
         full_url = f"{logo_url}.png"
         resp = requests.get(full_url, timeout=10)
         resp.raise_for_status()
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(resp.content)
         return True
@@ -55,30 +53,30 @@ def download_logo(logo_url: str, output_path: Path) -> bool:
 def main():
     # Fetch all sets
     sets = fetch_sets()
-    
+
     # Create logos directory
     LOGOS_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # Build mapping and download logos
     mapping: dict[str, str] = {}
     downloaded = 0
     skipped = 0
-    
+
     for s in sets:
         set_id = s.get("id", "")
         set_name = s.get("name", "")
         logo_url = s.get("logo")
-        
+
         if not set_name or not logo_url:
             continue
-        
+
         # Normalize name for matching
         name_lower = set_name.lower()
-        
+
         # Output filename
         safe_id = set_id.replace("/", "-")
         logo_path = LOGOS_DIR / f"{safe_id}.png"
-        
+
         # Check if already downloaded
         if logo_path.exists():
             skipped += 1
@@ -88,19 +86,19 @@ def main():
                 downloaded += 1
             else:
                 continue
-        
+
         # Add to mapping (use relative path from static dir)
         mapping[name_lower] = f"/static/logos/{safe_id}.png"
-        
+
         # Also add set_id as key for code-based lookups
         mapping[set_id.lower()] = f"/static/logos/{safe_id}.png"
-    
+
     # Save mapping file
     MAPPING_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(MAPPING_FILE, "w") as f:
         json.dump(mapping, f, indent=2, sort_keys=True)
-    
-    print(f"\nDone!")
+
+    print("\nDone!")
     print(f"  Downloaded: {downloaded}")
     print(f"  Skipped (existing): {skipped}")
     print(f"  Total mappings: {len(mapping)}")
@@ -110,4 +108,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

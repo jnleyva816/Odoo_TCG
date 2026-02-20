@@ -74,19 +74,19 @@ async def get_inventory(
         import base64
         last_id = int(base64.b64decode(cursor))
         filters.append(("id", ">", last_id))
-    
+
     items = await odoo.search_read(
         "stock.quant",
         filters,
         limit=limit,
         order="id ASC",
     )
-    
+
     # Generate next cursor
     next_cursor = None
     if len(items) == limit:
         next_cursor = base64.b64encode(str(items[-1]["id"]).encode()).decode()
-    
+
     return {
         "items": items,
         "next_cursor": next_cursor,
@@ -137,7 +137,7 @@ def warm_cache():
     sets = await odoo.search_read("product.set", [], limit=100)
     for s in sets:
         await query_cache.set(f"set:{s['id']}", s, ttl=3600)
-    
+
     # Warm popular cards
     popular_cards = await odoo.search_read(
         "product.product",
@@ -186,12 +186,12 @@ class OdooService:
             max_size=20,  # Max 20 concurrent connections
             max_idle_time=300,  # Close idle connections after 5 min
         )
-    
+
     def _create_connection(self):
         """Create new Odoo XML-RPC connection."""
         import xmlrpc.client
         return xmlrpc.client.ServerProxy(f"{self.odoo_url}/xmlrpc/2/object")
-    
+
     async def search_read(self, model: str, domain: list) -> list[dict]:
         """Execute search_read with connection pooling."""
         async with self.pool.connection() as conn:
@@ -224,7 +224,7 @@ class OdooService:
             timeout=60,  # Wait 60s before retry
             expected_exception=Exception,
         )
-    
+
     async def search_read(self, model: str, domain: list) -> list[dict]:
         """Execute with circuit breaker protection."""
         try:
@@ -238,7 +238,7 @@ class OdooService:
                 # Return cached data or error response
                 return await self._get_fallback_data(model, domain)
             raise
-    
+
     async def _get_fallback_data(self, model: str, domain: list):
         """Return cached data when Odoo is unavailable."""
         cache_key = f"{model}:{domain}"
@@ -284,16 +284,16 @@ def retry_with_backoff(
                 except exceptions as e:
                     if attempt == max_attempts - 1:
                         raise
-                    
+
                     # Calculate delay: 1s, 2s, 4s, 8s, ...
                     delay = min(base_delay * (2 ** attempt), max_delay)
-                    
+
                     # Add jitter to prevent thundering herd
                     import random
                     delay *= (0.5 + random.random())
-                    
+
                     await asyncio.sleep(delay)
-            
+
         return wrapper
     return decorator
 
@@ -325,23 +325,23 @@ async def init_db():
     async with aiosqlite.connect("auth.db") as db:
         # Enable WAL mode (Write-Ahead Logging)
         await db.execute("PRAGMA journal_mode=WAL")
-        
+
         # Increase cache size (10MB)
         await db.execute("PRAGMA cache_size=-10000")
-        
+
         # Synchronous=NORMAL (faster writes)
         await db.execute("PRAGMA synchronous=NORMAL")
-        
+
         # Enable foreign keys
         await db.execute("PRAGMA foreign_keys=ON")
-        
+
         # Create indexes
         await db.execute("""
-            CREATE INDEX IF NOT EXISTS idx_users_username 
+            CREATE INDEX IF NOT EXISTS idx_users_username
             ON users(username)
         """)
         await db.execute("""
-            CREATE INDEX IF NOT EXISTS idx_tokens_user_id 
+            CREATE INDEX IF NOT EXISTS idx_tokens_user_id
             ON refresh_tokens(user_id)
         """)
 ```
@@ -354,7 +354,7 @@ async def init_db():
 async def configure_meilisearch():
     """Optimize Meilisearch index configuration."""
     client = meilisearch.Client(meili_url, meili_key)
-    
+
     # Configure searchable attributes (order matters for ranking)
     await client.index("cards").update_searchable_attributes([
         "name",           # Highest priority
@@ -363,7 +363,7 @@ async def configure_meilisearch():
         "set_name",
         "rarity",
     ])
-    
+
     # Configure filterable attributes
     await client.index("cards").update_filterable_attributes([
         "set_id",
@@ -371,14 +371,14 @@ async def configure_meilisearch():
         "in_stock",
         "price_range",
     ])
-    
+
     # Configure sortable attributes
     await client.index("cards").update_sortable_attributes([
         "name",
         "price",
         "created_at",
     ])
-    
+
     # Configure faceting (for filtering UI)
     await client.index("cards").update_faceting({
         "maxValuesPerFacet": 100,
@@ -426,7 +426,7 @@ export function CardImage({ src, alt, loading = 'lazy' }: CardImageProps) {
     <picture>
       {/* WebP for modern browsers */}
       <source srcSet={src.replace('.jpg', '.webp')} type="image/webp" />
-      
+
       {/* Fallback to JPEG */}
       <img
         src={src}
@@ -451,17 +451,17 @@ export const queryClient = new QueryClient({
     queries: {
       // Stale time: 5 minutes
       staleTime: 5 * 60 * 1000,
-      
+
       // Cache time: 10 minutes
       cacheTime: 10 * 60 * 1000,
-      
+
       // Retry on failure (with exponential backoff)
       retry: 3,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      
+
       // Refetch on window focus (keep data fresh)
       refetchOnWindowFocus: true,
-      
+
       // Don't refetch on reconnect (avoid thundering herd)
       refetchOnReconnect: false,
     },
@@ -483,7 +483,7 @@ from app.utils.performance import get_performance_monitor
 async def get_performance_metrics():
     """Get performance statistics."""
     monitor = get_performance_monitor()
-    
+
     return {
         "overall": await monitor.get_stats(),
         "by_function": {
@@ -503,7 +503,7 @@ async def get_performance_metrics():
 async def detailed_health_check():
     """Comprehensive health check."""
     checks = {}
-    
+
     # Check Odoo
     try:
         odoo = get_odoo_service()
@@ -511,7 +511,7 @@ async def detailed_health_check():
         checks["odoo"] = {"status": "healthy", "latency_ms": 0}
     except Exception as e:
         checks["odoo"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # Check Redis
     try:
         redis_client = await get_redis()
@@ -519,7 +519,7 @@ async def detailed_health_check():
         checks["redis"] = {"status": "healthy"}
     except Exception as e:
         checks["redis"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # Check Meilisearch
     try:
         meili = get_meilisearch()
@@ -527,10 +527,10 @@ async def detailed_health_check():
         checks["meilisearch"] = {"status": "healthy"}
     except Exception as e:
         checks["meilisearch"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # Overall status
     all_healthy = all(c["status"] == "healthy" for c in checks.values())
-    
+
     return {
         "status": "healthy" if all_healthy else "degraded",
         "checks": checks,
@@ -549,15 +549,15 @@ from locust import HttpUser, task, between
 
 class TCGUser(HttpUser):
     wait_time = between(1, 3)
-    
+
     def on_start(self):
         """Login and get token."""
         response = self.client.post("/api/auth/login", json={
             "username": "test",
-            "password": "test",
+            "password": "test",  # pragma: allowlist secret
         })
         self.token = response.json()["access_token"]
-    
+
     @task(3)
     def search_cards(self):
         """Search for cards (most common operation)."""
@@ -565,7 +565,7 @@ class TCGUser(HttpUser):
             "/api/cards/search?q=pikachu",
             headers={"Authorization": f"Bearer {self.token}"},
         )
-    
+
     @task(2)
     def get_inventory(self):
         """Get inventory list."""
@@ -573,7 +573,7 @@ class TCGUser(HttpUser):
             "/api/inventory",
             headers={"Authorization": f"Bearer {self.token}"},
         )
-    
+
     @task(1)
     def get_health(self):
         """Health check."""

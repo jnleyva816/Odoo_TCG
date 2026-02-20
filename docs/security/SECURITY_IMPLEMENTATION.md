@@ -53,23 +53,23 @@ This document outlines the security mechanisms implemented in the Odoo TCG Inven
 server {
     listen 443 ssl http2;
     server_name inventory.example.com;
-    
+
     # TLS 1.3 preferred
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers 'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256';
     ssl_prefer_server_ciphers on;
-    
+
     # Let's Encrypt certificates
     ssl_certificate /etc/letsencrypt/live/inventory.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/inventory.example.com/privkey.pem;
-    
+
     # OCSP Stapling
     ssl_stapling on;
     ssl_stapling_verify on;
-    
+
     # Security headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
-    
+
     location / {
         proxy_pass http://localhost:8000;
         proxy_set_header Host $host;
@@ -265,7 +265,7 @@ docker compose up -d --build
 ## OWASP Top 10 Coverage
 
 - [x] A01 Broken Access Control
-- [x] A02 Cryptographic Failures  
+- [x] A02 Cryptographic Failures
 - [x] A03 Injection
 - [x] A04 Insecure Design
 - [x] A05 Security Misconfiguration

@@ -102,11 +102,11 @@ Thank you for your interest in contributing! This document provides guidelines f
 ```python
 def example_function(param: str, count: int = 0) -> dict[str, Any]:
     """Brief description of function.
-    
+
     Args:
         param: Description of param
         count: Description of count
-    
+
     Returns:
         Description of return value
     """

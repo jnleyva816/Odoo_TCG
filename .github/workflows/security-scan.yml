@@ -16,15 +16,15 @@ jobs:
   python-security:
     name: Python Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      
+
       - name: Create reports directory
         run: mkdir -p reports
 
@@ -34,19 +34,19 @@ jobs:
           pip install pip-audit bandit
           # Install only production dependencies for security scanning
           cd backend && pip install -e . && cd ..
-      
+
       - name: Run pip-audit (SBOM-based vulnerability scan)
         run: |
           pip-audit --desc --format json --output reports/pip-audit.json 2>&1 || true
           pip-audit --desc 2>&1 || true
         continue-on-error: true
-      
+
       - name: Run Bandit (Python code security scan)
         run: |
           bandit -r backend/app/ -f json -o reports/bandit.json 2>&1 || true
           bandit -r backend/app/ -ll 2>&1 || true
         continue-on-error: true
-      
+
       - name: Upload security reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -62,10 +62,10 @@ jobs:
   javascript-security:
     name: JavaScript Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -73,19 +73,19 @@ jobs:
 
       - name: Create reports directory
         run: mkdir -p reports
-      
+
       - name: Install dependencies
         run: |
           cd frontend
           npm ci
-      
+
       - name: Run npm audit
         run: |
           cd frontend
           npm audit --json > ../reports/npm-audit.json 2>&1 || true
           npm audit --audit-level=moderate 2>&1 || true
         continue-on-error: true
-      
+
       - name: Upload security reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -103,23 +103,23 @@ jobs:
     runs-on: ubuntu-latest
     # Only run on main branch pushes (not PRs) to avoid long build times
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Create reports directory
         run: mkdir -p reports
-      
+
       - name: Build backend image
         run: |
           docker build -f docker/Dockerfile.backend -t tcg-backend:test . || true
         continue-on-error: true
-      
+
       - name: Build frontend image
         run: |
           docker build -f docker/Dockerfile.frontend -t tcg-frontend:test . || true
         continue-on-error: true
-      
+
       - name: Run Trivy vulnerability scanner on backend
         uses: aquasecurity/trivy-action@master
         with:
@@ -129,7 +129,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
         continue-on-error: true
-      
+
       - name: Run Trivy vulnerability scanner on frontend
         uses: aquasecurity/trivy-action@master
         with:
@@ -139,7 +139,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
         continue-on-error: true
-      
+
       - name: Upload Trivy reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -155,12 +155,12 @@ jobs:
   secret-scan:
     name: Secret Scanning
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for complete scan
-      
+
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -176,13 +176,13 @@ jobs:
     runs-on: ubuntu-latest
     # Only run on schedule or main branch (slow job)
     if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Create reports directory
         run: mkdir -p reports
-      
+
       - name: Run OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -191,7 +191,7 @@ jobs:
           format: 'HTML'
           out: 'reports'
         continue-on-error: true
-      
+
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
         if: always()

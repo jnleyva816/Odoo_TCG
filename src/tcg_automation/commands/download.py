@@ -79,6 +79,12 @@ SET_CODE_ALIASES = {
     "asc": 24541,  # ME: Ascended Heroes
     "mep": 24451,  # ME: Mega Evolution Promo
     "mee": 24461,  # MEE: Mega Evolution Energies
+    # ============================================================
+    # CLASSIC ERA
+    # ============================================================
+    "bs": 604,  # Base Set (Original 1999)
+    "bs2": 605,  # Base Set 2
+    "bss": 1663,  # Base Set (Shadowless)
 }
 
 # Set code to SKU prefix mapping (for existing products)
@@ -109,6 +115,10 @@ SKU_PREFIXES = {
     "asc": "mea",
     "mep": "mep",
     "mee": "mee",
+    # Classic
+    "bs": "bs",
+    "bs2": "bs2",
+    "bss": "bss",
 }
 
 # Set code to full name mapping (avoids API call during import)
@@ -153,6 +163,10 @@ SET_NAMES = {
     "asc": "MEA: Ascended Heroes",
     "mep": "MEP: Mega Evolution Promo",
     "mee": "MEE: Mega Evolution Energies",
+    # Classic
+    "bs": "Base Set",
+    "bs2": "Base Set 2",
+    "bss": "Base Set (Shadowless)",
 }
 
 

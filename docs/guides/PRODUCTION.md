@@ -5,7 +5,7 @@ Comprehensive guide for deploying the TCG Inventory System to production.
 ## Pre-Deployment Checklist
 
 ### Security
-- [ ] Generate strong JWT secret: `openssl rand -hex 32`
+- [ ] Generate strong JWT secret: `openssl rand -hex 32` <!-- pragma: allowlist secret -->
 - [ ] Use strong database passwords
 - [ ] Enable HTTPS (use reverse proxy)
 - [ ] Configure firewall rules
@@ -127,7 +127,7 @@ npm run build
 server {
     listen 80;
     server_name tcg.yourdomain.com;
-    
+
     # Redirect HTTP to HTTPS
     return 301 https://$server_name$request_uri;
 }
@@ -135,31 +135,31 @@ server {
 server {
     listen 443 ssl http2;
     server_name tcg.yourdomain.com;
-    
+
     # SSL Configuration
     ssl_certificate /etc/letsencrypt/live/tcg.yourdomain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/tcg.yourdomain.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
-    
+
     # Security Headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
-    
+
     # Frontend (static files)
     location / {
         root /opt/tcg-inventory/frontend/dist;
         try_files $uri $uri/ /index.html;
-        
+
         # Cache static assets
         location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
         }
     }
-    
+
     # Backend API
     location /api {
         proxy_pass http://localhost:8000;
@@ -171,24 +171,24 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-        
+
         # Buffer settings
         proxy_buffering off;
         proxy_request_buffering off;
     }
-    
+
     # API docs
     location /docs {
         proxy_pass http://localhost:8000/docs;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
-    
+
     # Health check (for monitoring)
     location /health {
         proxy_pass http://localhost:8000/api/health;
@@ -228,7 +228,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - traefik-certs:/letsencrypt
-    
+
   backend:
     labels:
       - "traefik.enable=true"
@@ -236,7 +236,7 @@ services:
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
-  
+
   frontend:
     labels:
       - "traefik.enable=true"
@@ -344,7 +344,7 @@ services:
   backend:
     deploy:
       replicas: 3
-    
+
   nginx:
     image: nginx:alpine
     volumes:

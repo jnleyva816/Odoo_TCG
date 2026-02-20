@@ -28,7 +28,7 @@ class TestPasswordHashing:
         from app.auth.service import AuthService
 
         service = AuthService()
-        password = "secure_password_123"
+        password = "secure_password_123"  # pragma: allowlist secret
         hashed = service.hash_password(password)
 
         assert service.verify_password(password, hashed) is True
@@ -47,7 +47,7 @@ class TestPasswordHashing:
         from app.auth.service import AuthService
 
         service = AuthService()
-        password = "test_password"
+        password = "test_password"  # pragma: allowlist secret
 
         hash1 = service.hash_password(password)
         hash2 = service.hash_password(password)
@@ -63,9 +63,7 @@ class TestJWTTokens:
         from app.auth.service import AuthService
 
         service = AuthService()
-        token = service.create_access_token(
-            data={"sub": "testuser", "user_id": 1, "role": "user"}
-        )
+        token = service.create_access_token(data={"sub": "testuser", "user_id": 1, "role": "user"})
 
         assert isinstance(token, str)
         assert len(token) > 100  # JWT tokens are long
@@ -75,9 +73,7 @@ class TestJWTTokens:
         from app.auth.service import AuthService
 
         service = AuthService()
-        token = service.create_access_token(
-            data={"sub": "testuser", "user_id": 1, "role": "admin"}
-        )
+        token = service.create_access_token(data={"sub": "testuser", "user_id": 1, "role": "admin"})
 
         token_data = service.decode_token(token)
 
@@ -128,9 +124,7 @@ class TestUserRoles:
         from app.auth.service import AuthService
 
         service = AuthService()
-        token = service.create_access_token(
-            data={"sub": "admin", "user_id": 1, "role": "admin"}
-        )
+        token = service.create_access_token(data={"sub": "admin", "user_id": 1, "role": "admin"})
 
         token_data = service.decode_token(token)
         assert token_data.role == UserRole.ADMIN
@@ -164,9 +158,9 @@ class TestLoginModels:
         """Test UserLogin model validation."""
         from app.auth.models import UserLogin
 
-        login = UserLogin(username="testuser", password="password123")
+        login = UserLogin(username="testuser", password="password123")  # pragma: allowlist secret
         assert login.username == "testuser"
-        assert login.password == "password123"
+        assert login.password == "password123"  # pragma: allowlist secret
 
     def test_user_create_model(self):
         """Test UserCreate model validation."""
@@ -175,7 +169,7 @@ class TestLoginModels:
         user = UserCreate(
             username="newuser",
             email="test@example.com",
-            password="securepass123",
+            password="securepass123",  # pragma: allowlist secret
         )
         assert user.username == "newuser"
         assert user.email == "test@example.com"
@@ -189,7 +183,7 @@ class TestLoginModels:
             UserCreate(
                 username="user",
                 email="test@example.com",
-                password="short",  # Less than 8 chars
+                password="short",  # Less than 8 chars  # pragma: allowlist secret
             )
 
     def test_user_create_invalid_email_fails(self):
@@ -201,7 +195,7 @@ class TestLoginModels:
             UserCreate(
                 username="user",
                 email="not-an-email",
-                password="securepass123",
+                password="securepass123",  # pragma: allowlist secret
             )
 
 
@@ -221,6 +215,3 @@ class TestTokenModel:
         assert token.access_token.startswith("eyJ")
         assert token.token_type == "bearer"
         assert token.expires_in == 86400
-
-
-

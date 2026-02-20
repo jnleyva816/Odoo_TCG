@@ -162,7 +162,7 @@ export default function SetsPage() {
             {data?.total ?? 0} sets available from TCGdex
           </p>
         </div>
-        <button 
+        <button
           onClick={() => refetch()}
           className="btn btn-secondary"
           disabled={isLoading}
@@ -255,7 +255,7 @@ export default function SetsPage() {
               ({groupedSets[series].length} sets)
             </span>
           </h2>
-          
+
           <div className="space-y-2">
             {groupedSets[series].map((set, index) => (
               <div
@@ -265,8 +265,8 @@ export default function SetsPage() {
               >
                 {/* Set Logo/Code Badge */}
                 {set.logo_url ? (
-                  <img 
-                    src={set.logo_url} 
+                  <img
+                    src={set.logo_url}
                     alt={set.name}
                     className="w-12 h-12 object-contain flex-shrink-0"
                     onError={(e) => {

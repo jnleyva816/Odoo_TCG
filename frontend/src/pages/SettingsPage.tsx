@@ -123,7 +123,7 @@ export default function SettingsPage() {
 
   const toggleFeature = async (featureName: keyof FeatureFlags) => {
     if (!featureFlags) return;
-    
+
     setFeatureLoading(featureName);
     setFeatureError(null);
 
@@ -186,7 +186,7 @@ export default function SettingsPage() {
               <p className="text-sm text-surface-500">Brother QL-800</p>
             </div>
           </div>
-          
+
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-surface-600 dark:text-surface-400">Feature Enabled</span>
@@ -194,9 +194,9 @@ export default function SettingsPage() {
                 {printerEnabled ? <><Check className="w-3 h-3 mr-1" /> Yes</> : <><X className="w-3 h-3 mr-1" /> No</>}
               </span>
             </div>
-            
+
             <div className="divider" />
-            
+
             <div className="flex items-center justify-between">
               <span className="text-surface-600 dark:text-surface-400">Connection</span>
               <div className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export default function SettingsPage() {
               <p className="text-sm text-surface-500">Inventory location</p>
             </div>
           </div>
-          
+
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-surface-600 dark:text-surface-400">Current</span>
@@ -243,7 +243,7 @@ export default function SettingsPage() {
                 {currentWarehouse?.name || 'Not set'}
               </span>
             </div>
-            
+
             {canSwitchWarehouse && warehouses.length > 1 && (
               <>
                 <div className="divider" />
@@ -261,9 +261,9 @@ export default function SettingsPage() {
                 </div>
               </>
             )}
-            
+
             <div className="divider" />
-            
+
             <div className="flex items-center justify-between text-sm">
               <span className="text-surface-500">Available Warehouses</span>
               <span className="font-medium text-surface-900 dark:text-white">{warehouses.length}</span>
@@ -282,7 +282,7 @@ export default function SettingsPage() {
               <p className="text-sm text-surface-500">Profile information</p>
             </div>
           </div>
-          
+
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between py-2">
               <span className="text-surface-500">Username</span>
@@ -424,14 +424,35 @@ export default function SettingsPage() {
               <p className="text-sm text-surface-500">Add to home screen</p>
             </div>
           </div>
-          
-          <div className="p-4">
+
+          <div className="p-4 space-y-4">
+            {/* Android APK Download */}
+            <a
+              href="/api/download/mobile-app"
+              download
+              className="flex items-center gap-4 p-4 bg-surface-50 dark:bg-surface-800 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors group"
+            >
+              <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-sm">
+                <Smartphone className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-surface-900 dark:text-white group-hover:text-primary-500 transition-colors">
+                  Download Android App
+                </p>
+                <p className="text-sm text-surface-500">
+                  Install the native Android APK
+                </p>
+              </div>
+              <Download className="w-5 h-5 text-surface-400 group-hover:text-primary-500 transition-colors" />
+            </a>
+
+            {/* PWA Install */}
             {isInstalled ? (
               <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-500/10 rounded-xl border border-green-200 dark:border-green-500/20">
                 <Check className="w-6 h-6 text-green-500" />
                 <div>
-                  <p className="text-green-600 dark:text-green-400 font-medium">App Installed!</p>
-                  <p className="text-sm text-surface-500">You're using the installed version</p>
+                  <p className="text-green-600 dark:text-green-400 font-medium">PWA Installed!</p>
+                  <p className="text-sm text-surface-500">You're using the installed web version</p>
                 </div>
               </div>
             ) : isIOS ? (
@@ -456,7 +477,7 @@ export default function SettingsPage() {
                 className="btn btn-primary w-full py-3"
               >
                 <Download className="w-5 h-5" />
-                Install TCG Inventory
+                Install as Web App
               </button>
             ) : (
               <div className="p-4 bg-surface-50 dark:bg-surface-800 rounded-xl">
@@ -464,10 +485,10 @@ export default function SettingsPage() {
                   <Monitor className="w-8 h-8 text-surface-400 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-medium text-surface-900 dark:text-white mb-2">
-                      Install on Desktop / Android
+                      Install as Web App
                     </p>
                     <p className="text-sm text-surface-500">
-                      Look for the install icon in your browser's address bar. 
+                      Look for the install icon in your browser's address bar.
                       For best results, use Chrome or Edge.
                     </p>
                   </div>

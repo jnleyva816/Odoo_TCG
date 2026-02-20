@@ -14,11 +14,11 @@ src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
 # Set test environment variables BEFORE importing app modules
-os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"  # pragma: allowlist secret
 os.environ["ODOO_URL"] = "http://localhost:8069"
 os.environ["ODOO_DB"] = "test-db"
 os.environ["ODOO_USER"] = "test"
-os.environ["ODOO_PASSWORD"] = "test"
+os.environ["ODOO_PASSWORD"] = "test"  # pragma: allowlist secret
 os.environ["REDIS_URL"] = "redis://localhost:6379/15"  # Test database
 
 
@@ -106,7 +106,7 @@ def auth_token():
             "role": "user",
             "warehouse_id": 1,
             "warehouse_ids": [1],
-            "odoo_pwd": "test-password",
+            "odoo_pwd": "test-password",  # pragma: allowlist secret
             "exp": expire,
         }
         token = jwt.encode(token_data, settings.jwt_secret_key, algorithm="HS256")
@@ -130,7 +130,7 @@ def admin_token():
             "role": "admin",
             "warehouse_id": 1,
             "warehouse_ids": [1, 2, 3],
-            "odoo_pwd": "admin-password",
+            "odoo_pwd": "admin-password",  # pragma: allowlist secret
             "exp": expire,
         }
         token = jwt.encode(token_data, settings.jwt_secret_key, algorithm="HS256")

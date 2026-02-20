@@ -275,7 +275,9 @@ def test_ci_enhancements():
     ]
 
     for search_term, description in enhancements:
-        assert search_term in content, f"CI enhancement '{description}' not found (search: '{search_term}')"
+        assert (
+            search_term in content
+        ), f"CI enhancement '{description}' not found (search: '{search_term}')"
 
 
 def test_readme_updates():
@@ -295,6 +297,10 @@ def test_readme_updates():
     for search_term, description in updates:
         # Case-insensitive search for rate limiting
         if search_term == "rate limiting":
-            assert search_term.lower() in content.lower(), f"README missing '{description}' (search: '{search_term}')"
+            assert (
+                search_term.lower() in content.lower()
+            ), f"README missing '{description}' (search: '{search_term}')"
         else:
-            assert search_term in content, f"README missing '{description}' (search: '{search_term}')"
+            assert (
+                search_term in content
+            ), f"README missing '{description}' (search: '{search_term}')"

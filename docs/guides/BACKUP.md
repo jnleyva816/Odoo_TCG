@@ -6,7 +6,7 @@ Comprehensive guide for backing up and restoring the TCG Inventory System.
 
 ### 1. Odoo Database (Primary - CRITICAL)
 - **Location**: Odoo server (PostgreSQL)
-- **Contains**: 
+- **Contains**:
   - User accounts and authentication
   - Product catalog (TCG cards)
   - Inventory data
@@ -63,12 +63,12 @@ if command -v docker &> /dev/null; then
         -v tcg-redis-data:/data \
         -v "$(pwd)/$BACKUP_DIR":/backup \
         alpine tar czf /backup/redis-data.tar.gz /data
-    
+
     docker run --rm \
         -v tcg-meili-data:/data \
         -v "$(pwd)/$BACKUP_DIR":/backup \
         alpine tar czf /backup/meili-data.tar.gz /data
-    
+
     echo "✅ Docker volumes backed up"
 fi
 
@@ -349,7 +349,7 @@ gpg --decrypt backup-20240111.tar.gz.gpg > backup-20240111.tar.gz
 
 Document in your runbook:
 - Odoo administrator
-- Database administrator  
+- Database administrator
 - System administrator
 - On-call engineer
 

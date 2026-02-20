@@ -79,7 +79,7 @@ systemd.services.tcg-autodeploy = {
   wantedBy = [ "multi-user.target" ];
   path = [ pkgs.git pkgs.docker ];
   environment = {
-    WEBHOOK_SECRET = "your-webhook-secret-here";
+    WEBHOOK_SECRET = "your-webhook-secret-here"; # pragma: allowlist secret
     PYTHONUNBUFFERED = "1";
   };
   serviceConfig = {
@@ -146,10 +146,10 @@ Example Nginx config:
 server {
     listen 443 ssl;
     server_name tcg.yourdomain.com;
-    
+
     ssl_certificate /etc/letsencrypt/live/tcg.yourdomain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/tcg.yourdomain.com/privkey.pem;
-    
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -157,7 +157,7 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
     }
-    
+
     location /api {
         proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
@@ -233,5 +233,3 @@ docker compose up -d --build
 ### With Auto-Deploy
 
 Just push to GitHub - the webhook will handle the rest!
-
-

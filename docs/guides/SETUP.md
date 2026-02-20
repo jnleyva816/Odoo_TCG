@@ -70,7 +70,7 @@ ODOO_PASSWORD=your-password
 JWT_SECRET_KEY=your-secret-key-here
 ADMIN_USERNAME=admin
 ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD="your-secure-password"
+ADMIN_PASSWORD="your-secure-password"  # pragma: allowlist secret
 ```
 
 Generate a secure JWT secret:
@@ -359,4 +359,3 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for setting up automatic deployment with GitH
 1. Verify admin credentials in `.env`
 2. Check if database was initialized: look for "Admin user created" in logs
 3. Clear browser cache and try again
-

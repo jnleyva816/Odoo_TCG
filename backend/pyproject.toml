@@ -70,6 +70,3 @@ disallow_untyped_defs = false
 [[tool.mypy.overrides]]
 module = "app.auth.odoo_auth"
 ignore_errors = true
-
-
-

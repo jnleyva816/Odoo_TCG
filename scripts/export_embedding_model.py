@@ -89,12 +89,12 @@ def main():
         export_params=True,
         opset_version=14,
         do_constant_folding=True,
-        input_names=['input'],
-        output_names=['embedding'],
+        input_names=["input"],
+        output_names=["embedding"],
         dynamic_axes={
-            'input': {0: 'batch_size'},
-            'embedding': {0: 'batch_size'},
-        }
+            "input": {0: "batch_size"},
+            "embedding": {0: "batch_size"},
+        },
     )
 
     # Verify the exported model

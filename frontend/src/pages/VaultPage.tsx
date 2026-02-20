@@ -1,6 +1,6 @@
 /**
  * Digital Vault Page - Public collection showcase
- * 
+ *
  * Features:
  * - Create/manage "binders" of cards
  * - Publish to shareable public URLs
@@ -95,8 +95,8 @@ export default function VaultPage() {
       if (!response.ok) throw new Error('Failed');
       const data = await response.json();
       // Update the vault in the list with the new public URL
-      setVaults(vaults.map(v => 
-        v.id === vaultId 
+      setVaults(vaults.map(v =>
+        v.id === vaultId
           ? { ...v, public_url: data.public_url, visibility: 'unlisted' as const }
           : v
       ));
@@ -192,7 +192,7 @@ export default function VaultPage() {
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-lg font-semibold text-white">{vault.name}</h3>
                 <span className={`px-2 py-1 text-xs rounded ${
-                  vault.visibility === 'public' 
+                  vault.visibility === 'public'
                     ? 'bg-green-500/20 text-green-400'
                     : vault.visibility === 'unlisted'
                     ? 'bg-yellow-500/20 text-yellow-400'
@@ -288,4 +288,3 @@ export default function VaultPage() {
     </div>
   );
 }
-

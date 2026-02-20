@@ -104,12 +104,12 @@ server {
     listen 80;
     listen [::]:80;
     server_name inventory.example.com;
-    
+
     # ACME challenge for Let's Encrypt
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
-    
+
     # Redirect all other traffic to HTTPS
     location / {
         return 301 https://$server_name$request_uri;
@@ -121,12 +121,12 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name inventory.example.com;
-    
+
     # SSL Configuration
     ssl_certificate /etc/letsencrypt/live/inventory.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/inventory.example.com/privkey.pem;
     ssl_trusted_certificate /etc/letsencrypt/live/inventory.example.com/chain.pem;
-    
+
     # SSL Security
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
@@ -134,30 +134,30 @@ server {
     ssl_session_timeout 1d;
     ssl_session_cache shared:SSL:50m;
     ssl_session_tickets off;
-    
+
     # OCSP Stapling
     ssl_stapling on;
     ssl_stapling_verify on;
     resolver 8.8.8.8 8.8.4.4 valid=300s;
     resolver_timeout 5s;
-    
+
     # Security Headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     # Logging
     access_log /var/log/nginx/tcg-access.log;
     error_log /var/log/nginx/tcg-error.log;
-    
+
     # Gzip Compression
     gzip on;
     gzip_vary on;
     gzip_comp_level 6;
     gzip_types text/plain text/css text/xml text/javascript application/json application/javascript application/xml+rss application/rss+xml font/truetype font/opentype application/vnd.ms-fontobject image/svg+xml;
-    
+
     # Frontend (React)
     location / {
         proxy_pass http://frontend;
@@ -165,13 +165,13 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # WebSocket support (for future real-time features)
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
-    
+
     # Backend API
     location /api/ {
         proxy_pass http://backend;
@@ -179,19 +179,19 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-        
+
         # Buffer settings
         proxy_buffering on;
         proxy_buffer_size 4k;
         proxy_buffers 8 4k;
         proxy_busy_buffers_size 8k;
     }
-    
+
     # API Documentation
     location /docs {
         proxy_pass http://backend;
@@ -200,14 +200,14 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     # Static assets with caching
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
         proxy_pass http://frontend;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     # Health check endpoint (bypass caching)
     location = /api/health {
         proxy_pass http://backend;
@@ -323,12 +323,12 @@ sudo apt install postgresql postgresql-contrib -y
 sudo -u postgres psql
 
 CREATE DATABASE tcg_auth;
-CREATE USER tcg_user WITH ENCRYPTED PASSWORD 'secure-password';
+CREATE USER tcg_user WITH ENCRYPTED PASSWORD 'secure-password'; -- pragma: allowlist secret
 GRANT ALL PRIVILEGES ON DATABASE tcg_auth TO tcg_user;
 \q
 
 # Update connection string in .env
-# DATABASE_URL=postgresql://tcg_user:secure-password@localhost:5432/tcg_auth
+# DATABASE_URL=postgresql://tcg_user:secure-password@localhost:5432/tcg_auth  # pragma: allowlist secret
 ```
 
 ### 2. Redis Configuration
@@ -669,11 +669,11 @@ http {
     sendfile on;
     tcp_nopush on;
     tcp_nodelay on;
-    
+
     # Connection pooling
     keepalive_timeout 65;
     keepalive_requests 100;
-    
+
     # Client body size
     client_max_body_size 10M;
 }

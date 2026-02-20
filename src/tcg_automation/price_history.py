@@ -70,7 +70,8 @@ def init_price_history_table() -> bool:
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
+                cur.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS price_history (
                         id SERIAL PRIMARY KEY,
                         product_sku VARCHAR(50) NOT NULL,
@@ -87,7 +88,8 @@ def init_price_history_table() -> bool:
                         ON price_history(product_sku);
                     CREATE INDEX IF NOT EXISTS idx_price_history_date
                         ON price_history(recorded_at);
-                """)
+                """
+                )
             conn.commit()
         return True
     except Exception as e:

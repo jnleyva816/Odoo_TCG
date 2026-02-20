@@ -16,5 +16,3 @@ fi
 
 # Run price sync
 tcg sync
-
-

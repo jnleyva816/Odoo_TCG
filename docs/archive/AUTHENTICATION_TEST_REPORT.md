@@ -93,10 +93,10 @@ async def get_current_user(
 async def lifespan(app: FastAPI):
     ...
     auth = get_odoo_auth_service()  # ✅ Initializes OdooAuthService
-    
+
     print("🔐 Initializing Odoo authentication...")
     await auth.initialize()
-    
+
     print(f"🔌 Connecting to Odoo at {settings.odoo_url}...")
     ...
     print("   Users authenticate directly with Odoo credentials")  # ✅ Explicit message
@@ -106,7 +106,7 @@ async def lifespan(app: FastAPI):
 
 ### 5. Legacy Code Check
 
-**Files**: 
+**Files**:
 - `backend/app/auth/service.py` - Contains SQLite-based `AuthService`
 - `backend/app/auth/database.py` - Contains SQLite database functions
 

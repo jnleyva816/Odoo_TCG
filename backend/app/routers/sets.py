@@ -256,9 +256,9 @@ async def run_tcgdex_import(set_code: str, set_data: dict):
                 card_name = card.get("name", "Unknown")
                 local_id = card.get("localId", "")
 
-                _import_status[set_code]["message"] = (
-                    f"Processing {i + 1}/{len(cards)}: {card_name}"
-                )
+                _import_status[set_code][
+                    "message"
+                ] = f"Processing {i + 1}/{len(cards)}: {card_name}"
 
                 sku = f"{set_code}-{local_id}".lower()
                 display_name = f"{card_name} ({local_id})"

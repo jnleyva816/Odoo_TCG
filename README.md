@@ -241,7 +241,7 @@ pip install -e ".[dev]"
 # Run linter
 ruff check .
 
-# Run type checker  
+# Run type checker
 mypy .
 
 # Run tests

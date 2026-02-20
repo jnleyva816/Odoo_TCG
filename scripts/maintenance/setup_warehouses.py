@@ -19,14 +19,14 @@ from pathlib import Path
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
-from app.services.odoo import get_odoo_service
-from app.auth.service import get_auth_service
-from app.auth.database import (
+from app.auth.database import (  # noqa: E402
     get_user_by_username,
+    init_db,
     update_user_warehouse,
     update_user_warehouse_ids,
-    init_db,
 )
+from app.auth.service import get_auth_service  # noqa: E402
+from app.services.odoo import get_odoo_service  # noqa: E402
 
 
 async def main():
@@ -119,18 +119,20 @@ async def main():
         user_id = await auth.create_regular_user(
             username="flemmian",
             email="wren.fleming@gmail.com",
-            password="Password1234!",
+            password="Password1234!",  # pragma: allowlist secret
             warehouse_id=wren_wh_id,
         )
-        print(f"   ✅ Created user 'flemmian' (ID: {user_id}) with warehouse: {wren_wh.get('name', wren_wh_id)}")
+        print(
+            f"   ✅ Created user 'flemmian' (ID: {user_id}) with warehouse: {wren_wh.get('name', wren_wh_id)}"
+        )
 
     print()
     print("=" * 60)
     print("🎉 Setup complete!")
     print()
     print("User summary:")
-    print(f"   - Admin (Josh): Has access to BOTH warehouses, can switch between them")
-    print(f"   - flemmian (Wren): Only sees Wren's warehouse inventory")
+    print("   - Admin (Josh): Has access to BOTH warehouses, can switch between them")
+    print("   - flemmian (Wren): Only sees Wren's warehouse inventory")
     print()
     print("Login credentials for Wren:")
     print("   Username: flemmian")
@@ -141,4 +143,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

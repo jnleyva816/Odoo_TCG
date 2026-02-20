@@ -45,11 +45,11 @@ export function InstallPrompt() {
 
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     if (outcome === 'accepted') {
       console.log('✅ PWA installed');
     }
-    
+
     setDeferredPrompt(null);
     setShowPrompt(false);
   };
@@ -67,7 +67,7 @@ export function InstallPrompt() {
         <div className="flex-shrink-0 bg-white/20 rounded-lg p-2">
           <Download className="w-6 h-6 text-white" />
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold text-sm">Install TCG Inventory</h3>
           {isIOS ? (
@@ -101,5 +101,3 @@ export function InstallPrompt() {
     </div>
   );
 }
-
-

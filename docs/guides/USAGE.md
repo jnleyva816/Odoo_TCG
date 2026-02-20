@@ -161,5 +161,3 @@ The app is fully responsive and works on mobile devices:
 4. All features work on mobile
 
 For best results, bookmark the app to your home screen for quick access.
-
-

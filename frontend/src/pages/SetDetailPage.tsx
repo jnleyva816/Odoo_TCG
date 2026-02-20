@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { 
-  LayoutGrid, List, Loader2, Package, Search, X, ArrowLeft, 
-  ChevronDown, SortAsc, SortDesc, Warehouse, Layers 
+import {
+  LayoutGrid, List, Loader2, Package, Search, X, ArrowLeft,
+  ChevronDown, SortAsc, SortDesc, Warehouse, Layers
 } from 'lucide-react'
 import { getInventory, InventoryItem } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
@@ -23,7 +23,7 @@ function getBaseName(name: string): string {
     /\s*-\s*(Reverse Holo(?:foil)?)\s*$/i,
     /\s*-\s*(Holo(?:foil)?)\s*$/i,
   ]
-  
+
   let baseName = name
   for (const pattern of patterns) {
     baseName = baseName.replace(pattern, '')
@@ -39,20 +39,20 @@ interface GroupedCard extends InventoryItem {
 
 function groupCardsByBaseName(cards: InventoryItem[]): GroupedCard[] {
   const groups = new Map<string, InventoryItem[]>()
-  
+
   for (const card of cards) {
     const baseName = getBaseName(card.name).toLowerCase()
     const key = `${card.set_name || ''}-${baseName}`
-    
+
     if (!groups.has(key)) {
       groups.set(key, [])
     }
     groups.get(key)!.push(card)
   }
-  
+
   // For each group, pick the "primary" card (normal version) and add variant info
   const result: GroupedCard[] = []
-  
+
   for (const cards of groups.values()) {
     // Sort: Normal first, then by SKU
     cards.sort((a, b) => {
@@ -62,17 +62,17 @@ function groupCardsByBaseName(cards: InventoryItem[]): GroupedCard[] {
       if (!aIsNormal && bIsNormal) return 1
       return a.sku.localeCompare(b.sku)
     })
-    
+
     const primary = cards[0]
     const totalQuantity = cards.reduce((sum, c) => sum + (c.quantity || 0), 0)
-    
+
     result.push({
       ...primary,
       variantCount: cards.length,
       totalQuantity,
     })
   }
-  
+
   return result
 }
 
@@ -81,16 +81,16 @@ export default function SetDetailPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { currentWarehouse } = useAuth()
-  
+
   const setName = (location.state as { setName?: string })?.setName || 'Set'
-  
+
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [sortField, setSortField] = useState<SortField>('sku')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null)
-  
+
   const searchRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
@@ -315,14 +315,14 @@ export default function SetDetailPage() {
                   key={card.id}
                   onClick={() => handleCardClick(card)}
                   className={`card p-3 cursor-pointer transition-all hover:shadow-soft-lg hover:-translate-y-1 animate-fade-in group ${
-                    inStock 
-                      ? 'hover:border-primary-500/50 ring-2 ring-primary-500/20' 
+                    inStock
+                      ? 'hover:border-primary-500/50 ring-2 ring-primary-500/20'
                       : 'opacity-60 hover:opacity-80'
                   }`}
                   style={{ animationDelay: `${Math.min(index * 15, 300)}ms` }}
                 >
                   {/* Card Image */}
-                  <div 
+                  <div
                     className="aspect-[2.5/3.5] rounded-lg overflow-hidden mb-3"
                     style={!inStock ? { filter: 'saturate(0.3) brightness(0.7)' } : {}}
                   >
@@ -345,8 +345,8 @@ export default function SetDetailPage() {
                     </span>
                     <div className="flex items-center gap-1">
                       {card.variantCount > 1 && (
-                        <span 
-                          className="flex items-center gap-0.5 text-[10px] text-surface-400" 
+                        <span
+                          className="flex items-center gap-0.5 text-[10px] text-surface-400"
                           title={`${card.variantCount} variants (Normal, Holo, etc.)`}
                         >
                           <Layers size={10} />
@@ -362,7 +362,7 @@ export default function SetDetailPage() {
                   </div>
                 </div>
               )})}
-            
+
             </div>
           )}
         </>
@@ -384,25 +384,25 @@ export default function SetDetailPage() {
                 <thead>
                   <tr className="border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/50">
                     <th className="w-16 px-4 py-3"></th>
-                    <th 
+                    <th
                       onClick={() => toggleSort('sku')}
                       className="px-4 py-3 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider cursor-pointer hover:text-primary-500"
                     >
                       SKU {sortField === 'sku' && <SortIcon size={12} className="inline ml-1" />}
                     </th>
-                    <th 
+                    <th
                       onClick={() => toggleSort('name')}
                       className="px-4 py-3 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider cursor-pointer hover:text-primary-500"
                     >
                       Name {sortField === 'name' && <SortIcon size={12} className="inline ml-1" />}
                     </th>
-                    <th 
+                    <th
                       onClick={() => toggleSort('quantity')}
                       className="px-4 py-3 text-right text-xs font-semibold text-surface-500 uppercase tracking-wider cursor-pointer hover:text-primary-500"
                     >
                       Qty {sortField === 'quantity' && <SortIcon size={12} className="inline ml-1" />}
                     </th>
-                    <th 
+                    <th
                       onClick={() => toggleSort('price')}
                       className="px-4 py-3 text-right text-xs font-semibold text-surface-500 uppercase tracking-wider cursor-pointer hover:text-primary-500"
                     >
@@ -423,7 +423,7 @@ export default function SetDetailPage() {
                       style={{ animationDelay: `${Math.min(index * 10, 200)}ms` }}
                     >
                       <td className="px-4 py-3">
-                        <div 
+                        <div
                           className="w-10 h-14 rounded overflow-hidden"
                           style={!inStock ? { filter: 'saturate(0.3) brightness(0.7)' } : {}}
                         >
@@ -442,8 +442,8 @@ export default function SetDetailPage() {
                         <div className="flex items-center gap-2">
                           {getBaseName(card.name)}
                           {card.variantCount > 1 && (
-                            <span 
-                              className="flex items-center gap-0.5 text-xs text-surface-400" 
+                            <span
+                              className="flex items-center gap-0.5 text-xs text-surface-400"
                               title={`${card.variantCount} variants (Normal, Holo, etc.)`}
                             >
                               <Layers size={12} />
@@ -479,4 +479,3 @@ export default function SetDetailPage() {
     </div>
   )
 }
-

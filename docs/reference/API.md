@@ -128,7 +128,7 @@ http://localhost:8000/docs
 # Login
 curl -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "password"}'
+  -d '{"username": "admin", "password": "password"}' # pragma: allowlist secret
 
 # Get inventory (with token)
 curl http://localhost:8000/api/inventory/ \
@@ -143,7 +143,7 @@ import requests
 # Login
 response = requests.post(
     "http://localhost:8000/api/auth/login",
-    json={"username": "admin", "password": "password"}
+    json={"username": "admin", "password": "password"}  # pragma: allowlist secret
 )
 token = response.json()["access_token"]
 

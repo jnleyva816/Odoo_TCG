@@ -29,5 +29,3 @@ CMD ["--help"]
 
 # Expose port for web server
 EXPOSE 5000
-
-

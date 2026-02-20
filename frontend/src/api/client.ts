@@ -359,7 +359,7 @@ export async function getAvailableSets(params?: {
   const searchParams = new URLSearchParams()
   if (params?.search) searchParams.set('search', params.search)
   if (params?.show_downloaded) searchParams.set('show_downloaded', 'true')
-  
+
   const res = await authFetch(`${API_BASE}/sets/available?${searchParams}`)
   if (!res.ok) throw new Error('Failed to fetch sets')
   return res.json()
@@ -451,24 +451,24 @@ export async function scanImage(file: File, detectOnly = false): Promise<ScanRes
   const formData = new FormData()
   formData.append('file', file)
   formData.append('detect_only', String(detectOnly))
-  
+
   const token = localStorage.getItem(TOKEN_KEY)
   const headers: HeadersInit = {}
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-  
+
   const res = await fetch(`${API_BASE}/scanner/scan`, {
     method: 'POST',
     headers,
     body: formData,
   })
-  
+
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_KEY)
     dispatchAuthFailure()
   }
-  
+
   if (!res.ok) throw new Error('Scan failed')
   return res.json()
 }

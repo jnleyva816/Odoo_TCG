@@ -21,7 +21,7 @@ export default function Layout({ children, darkMode, onToggleDark }: LayoutProps
 
   const handleWarehouseSwitch = async (warehouseId: number) => {
     if (isSwitching || warehouseId === currentWarehouse?.id) return
-    
+
     setIsSwitching(true)
     try {
       await switchWarehouse(warehouseId)

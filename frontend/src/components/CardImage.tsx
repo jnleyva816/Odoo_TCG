@@ -18,7 +18,7 @@ export default function CardImage({ productId, alt, size = 'image_256', classNam
       {loading && !error && (
         <div className="absolute inset-0 card-image-placeholder" />
       )}
-      
+
       {error ? (
         <div className="absolute inset-0 flex items-center justify-center text-surface-400">
           <ImageOff size={32} />
@@ -41,4 +41,3 @@ export default function CardImage({ productId, alt, size = 'image_256', classNam
     </div>
   )
 }
-

@@ -333,5 +333,5 @@ For questions about the new features:
 
 ---
 
-**Last Updated:** 2026-01-17  
+**Last Updated:** 2026-01-17
 **Version:** 2.0.0

@@ -57,7 +57,7 @@ if command -v docker &> /dev/null; then
             alpine tar czf /backup/redis-data.tar.gz -C /data . 2>/dev/null || log_warn "Redis data backup failed"
         log_info "Redis data backed up"
     fi
-    
+
     if docker volume ls | grep -q "tcg-meili-data"; then
         docker run --rm \
             -v tcg-meili-data:/data \

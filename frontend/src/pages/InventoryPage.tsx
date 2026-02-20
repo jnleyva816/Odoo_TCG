@@ -198,8 +198,8 @@ export default function InventoryPage() {
                   {/* Set Icon/Logo */}
                   <div className="aspect-square bg-gradient-to-br from-primary-500/10 to-primary-600/20 rounded-xl flex items-center justify-center mb-4 group-hover:from-primary-500/20 group-hover:to-primary-600/30 transition-colors overflow-hidden">
                     {set.logo_url ? (
-                      <img 
-                        src={set.logo_url} 
+                      <img
+                        src={set.logo_url}
                         alt={set.name}
                         className="w-full h-full object-contain p-2"
                         onError={(e) => {
@@ -250,8 +250,8 @@ export default function InventoryPage() {
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-gradient-to-br from-primary-500/10 to-primary-600/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {set.logo_url ? (
-                              <img 
-                                src={set.logo_url} 
+                              <img
+                                src={set.logo_url}
                                 alt={set.name}
                                 className="w-full h-full object-contain p-1"
                                 onError={(e) => {

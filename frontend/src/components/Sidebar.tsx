@@ -77,11 +77,11 @@ export function Sidebar({ children }: SidebarProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          
+
           <h1 className="font-semibold text-surface-900 dark:text-white">
             TCG Inventory
           </h1>
-          
+
           <button
             onClick={() => setIsDark(!isDark)}
             className="p-2 text-surface-500 hover:text-primary-500 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
@@ -103,8 +103,8 @@ export function Sidebar({ children }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-72 
-          bg-white dark:bg-surface-900 
+          fixed top-0 left-0 z-50 h-full w-72
+          bg-white dark:bg-surface-900
           border-r border-surface-200 dark:border-surface-800
           transform transition-transform duration-300 ease-out
           lg:translate-x-0
@@ -148,7 +148,7 @@ export function Sidebar({ children }: SidebarProps) {
                 <p className="text-xs text-surface-500 capitalize">{user.role}</p>
               </div>
             </div>
-            
+
             {/* Warehouse Selector */}
             {currentWarehouse && (
               <div className="mt-3 p-3 bg-surface-50 dark:bg-surface-800 rounded-lg">
@@ -224,9 +224,9 @@ export function Sidebar({ children }: SidebarProps) {
           <button
             onClick={logout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-                       text-surface-600 dark:text-surface-400 
+                       text-surface-600 dark:text-surface-400
                        font-medium text-sm
-                       hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 
+                       hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400
                        transition-colors"
           >
             <LogOut className="w-5 h-5" />
