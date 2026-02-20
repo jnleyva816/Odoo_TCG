@@ -70,9 +70,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # Permissions policy (disable unnecessary features)
-        response.headers[
-            "Permissions-Policy"
-        ] = "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+        )
 
         return response
 
