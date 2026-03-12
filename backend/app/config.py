@@ -34,8 +34,15 @@ class Settings(BaseSettings):
     image_cache_ttl: int = 3600  # 1 hour
     image_cache_max_size: int = 1000
 
-    # CORS
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS - include DuckDNS for web + mobile app access
+    # "null" = React Native / mobile apps that don't send a proper Origin
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://flatnosegang-tcg.duckdns.org",
+        "http://flatnosegang-tcg.duckdns.org",
+        "null",
+    ]
 
     # Brother QL Label Printer
     printer_enabled: bool = False
